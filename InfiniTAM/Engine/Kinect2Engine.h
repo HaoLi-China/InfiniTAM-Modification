@@ -21,6 +21,8 @@ namespace InfiniTAM
 			PrivateData *data;
 
 			Vector2i imageSize_d, imageSize_rgb;
+			USHORT nDepthMinReliableDistance;
+			USHORT nDepthMaxDistance;
 			bool colorAvailable, depthAvailable;
 		public:
 			Kinect2Engine(const char *calibFilename);
