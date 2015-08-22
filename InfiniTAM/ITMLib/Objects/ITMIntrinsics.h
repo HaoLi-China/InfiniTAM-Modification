@@ -47,6 +47,7 @@ namespace ITMLib
 				// standard calibration parameters for Kinect RGB camera. Not at all
 				// accurate, though...
 				SetFrom(580, 580, 320, 240, 640, 480);
+				//SetFrom(366.685, 366.685, 256.52, 208.1, 640, 480);
 			}
 		};
 	}

@@ -18,6 +18,7 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 		settings->deviceType == ITMLibSettings::DEVICE_CUDA ? MEMORYDEVICE_CUDA : MEMORYDEVICE_CPU);
 
 	meshingEngine = NULL;
+
 	switch (settings->deviceType)
 	{
 	case ITMLibSettings::DEVICE_CPU:

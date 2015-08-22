@@ -70,6 +70,8 @@ Kinect2Engine::Kinect2Engine(const char *calibFilename) : ImageSourceEngine(cali
 			hr = pDepthFrameSource->OpenReader(&data->depthFrameReader);
 
 		SafeRelease(pDepthFrameSource);
+
+		this->calib.intrinsics_d.SetFrom(366.685, 366.685, 256.52, 208.1, 640, 480);
 	}
 
 	if (!data->kinectSensor || FAILED(hr))
