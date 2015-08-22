@@ -30,20 +30,25 @@ class Kinect2Engine::PrivateData {
 
 	IKinectSensor* kinectSensor;
 	IDepthFrameReader* depthFrameReader;
+	IColorFrameReader* colorFrameReader;
 };
 
 //Hao modified it
 Kinect2Engine::Kinect2Engine(const char *calibFilename) : ImageSourceEngine(calibFilename)
 {
 	imageSize_d = Vector2i(512, 424);
-	imageSize_rgb = Vector2i(640, 480);
+	imageSize_rgb = Vector2i(1920, 1080);
+	//imageSize_rgb = Vector2i(640, 480);
 
 	nDepthMinReliableDistance = 500;
 	nDepthMaxDistance = USHRT_MAX;
 	
 	data = new PrivateData();
 
-	colorAvailable = false;
+	// create heap storage for color pixel data in RGBX format
+	m_pColorRGBX = new RGBQUAD[imageSize_rgb.x * imageSize_rgb.y];
+
+	colorAvailable = true;
 
 	HRESULT hr;
 	
@@ -60,6 +65,7 @@ Kinect2Engine::Kinect2Engine(const char *calibFilename) : ImageSourceEngine(cali
 	if (data->kinectSensor)
 	{
 		IDepthFrameSource* pDepthFrameSource = NULL;
+		IColorFrameSource* pColorFrameSource = NULL;
 
 		hr = data->kinectSensor->Open();
 
@@ -69,6 +75,13 @@ Kinect2Engine::Kinect2Engine(const char *calibFilename) : ImageSourceEngine(cali
 		if (SUCCEEDED(hr))
 			hr = pDepthFrameSource->OpenReader(&data->depthFrameReader);
 
+		if (SUCCEEDED(hr))
+			hr = data->kinectSensor->get_ColorFrameSource(&pColorFrameSource);
+
+		if (SUCCEEDED(hr))
+			hr = pColorFrameSource->OpenReader(&data->colorFrameReader);
+
+		SafeRelease(pColorFrameSource);
 		SafeRelease(pDepthFrameSource);
 
 		this->calib.intrinsics_d.SetFrom(366.685, 366.685, 256.52, 208.1, 640, 480);
@@ -89,6 +102,12 @@ Kinect2Engine::~Kinect2Engine()
 	if (data->kinectSensor) data->kinectSensor->Close();
 
 	SafeRelease(data->kinectSensor);
+
+	if (m_pColorRGBX)
+	{
+		delete[] m_pColorRGBX;
+		m_pColorRGBX = NULL;
+	}
 }
 
 //Hao modified it
@@ -97,6 +116,51 @@ void Kinect2Engine::getImages(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthI
 	Vector4u *rgb = rgbImage->GetData(MEMORYDEVICE_CPU);
 	if (colorAvailable)
 	{
+		IColorFrame* pColorFrame = NULL;
+		ColorImageFormat imageFormat = ColorImageFormat_None;
+		UINT nBufferSize = 0;
+		RGBQUAD *c_pBuffer = NULL;
+
+		HRESULT hr = data->colorFrameReader->AcquireLatestFrame(&pColorFrame);
+
+		if (SUCCEEDED(hr))
+		{
+			if (SUCCEEDED(hr))
+				hr = pColorFrame->get_RawColorImageFormat(&imageFormat);
+
+			if (SUCCEEDED(hr))
+			{
+				if (imageFormat == ColorImageFormat_Bgra)
+				{
+					hr = pColorFrame->AccessRawUnderlyingBuffer(&nBufferSize, reinterpret_cast<BYTE**>(&c_pBuffer));
+				}
+				else if (m_pColorRGBX)
+				{
+					c_pBuffer = m_pColorRGBX;
+					nBufferSize = imageSize_rgb.x * imageSize_rgb.y * sizeof(RGBQUAD);
+					hr = pColorFrame->CopyConvertedFrameDataToArray(nBufferSize, reinterpret_cast<BYTE*>(c_pBuffer), ColorImageFormat_Bgra);
+				}
+				else
+				{
+					hr = E_FAIL;
+				}
+			}
+
+			if (SUCCEEDED(hr) && c_pBuffer)
+			{
+				for (int i = 0; i < imageSize_rgb.x * imageSize_rgb.y; i++)
+				{
+					Vector4u newPix; 
+					RGBQUAD oldPix = c_pBuffer[i];
+					newPix.x = oldPix.rgbRed; 
+					newPix.y = oldPix.rgbGreen; 
+					newPix.z = oldPix.rgbBlue; 
+					newPix.w = 255;
+					rgb[i] = newPix;
+				}
+			}
+		}
+		SafeRelease(pColorFrame);
 	}
 	else memset(rgb, 0, rgbImage->dataSize * sizeof(Vector4u));
 
@@ -104,7 +168,7 @@ void Kinect2Engine::getImages(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthI
 	if (depthAvailable)
 	{
 		IDepthFrame* pDepthFrame = NULL;
-		UINT16 *pBuffer = NULL;
+		UINT16 *d_pBuffer = NULL;
 		UINT nBufferSize = 0;
 
 		HRESULT hr = data->depthFrameReader->AcquireLatestFrame(&pDepthFrame);
@@ -112,13 +176,13 @@ void Kinect2Engine::getImages(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthI
 		if (SUCCEEDED(hr))
 		{
 			if (SUCCEEDED(hr))
-				hr = pDepthFrame->AccessUnderlyingBuffer(&nBufferSize, &pBuffer);
+				hr = pDepthFrame->AccessUnderlyingBuffer(&nBufferSize, &d_pBuffer);
 
-			if (SUCCEEDED(hr) && pBuffer)
+			if (SUCCEEDED(hr) && d_pBuffer)
 			{
 				for (int i = 0; i < imageSize_d.x * imageSize_d.y; i++)
 				{
-					ushort depthPix = pBuffer[i];
+					ushort depthPix = d_pBuffer[i];
 					depth[i] = (depthPix >= nDepthMinReliableDistance) && (depthPix <= nDepthMaxDistance) ? (short)depthPix : -1;
 				}
 			}
