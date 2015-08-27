@@ -8,6 +8,7 @@
 #include "Engine/OpenNIEngine.h"
 #include "Engine/Kinect2Engine.h"
 #include "Engine/LibUVCEngine.h"
+#include "Engine/ImageFileEngine.h"
 
 using namespace InfiniTAM::Engine;
 
@@ -38,6 +39,28 @@ static void CreateDefaultImageSource(ImageSourceEngine* & imageSource, IMUSource
 			printf("using imu data: %s\n", filename_imu);
 			imageSource = new RawFileReader(calibFile, filename1, filename2, Vector2i(320, 240), 0.5f);
 			imuSource = new IMUSourceEngine(filename_imu);
+		}
+	}
+
+	if (imageSource == NULL)
+	{
+		//const char *path1 = "E:/HaoLi/MyGithub/Mobility-Reconstruction/MobilityRecon/MobilityRecon/scan/depth_image";
+		//const char *path2 = "E:/HaoLi/MyGithub/Mobility-Reconstruction/MobilityRecon/MobilityRecon/scan/rgb_image";
+
+		const char *path1 = "E:\\HaoLi\\MyGithub\\Mobility-Reconstruction\\MobilityRecon\\MobilityRecon\\scan\\depth_image";
+		const char *path2 = "E:\\HaoLi\\MyGithub\\Mobility-Reconstruction\\MobilityRecon\\MobilityRecon\\scan\\rgb_image";
+
+		//const char *path1 = NULL;
+		//const char *path2 = NULL;
+
+		printf("using depth images: %s\nusing rgb images: %s\n", path1, path2);
+
+		imageSource = new ImageFileEngine(calibFile, path1, path2);
+
+		if (imageSource->getDepthImageSize().x == 0)
+		{
+			delete imageSource;
+			imageSource = NULL;
 		}
 	}
 

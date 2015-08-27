@@ -5,11 +5,11 @@
 #include <stdio.h>
 #include <fstream>
 
+#include <io.h> 
+
 #ifdef USE_LIBPNG
 #include <png.h>
 #endif
-
-using namespace std;
 
 static const char *pgm_ascii_id = "P2";
 static const char *ppm_ascii_id = "P3";
@@ -422,3 +422,23 @@ bool ReadImageFromFile(ITMShortImage *image, const char *fileName)
 	return true;
 }
 
+//Hao added it  
+void GetAllFiles(string path, vector<string>& files)
+{
+	string cmd = "DIR /B/S " + path + "> fileName.txt";
+	system(cmd.c_str());
+
+	ifstream ifs("fileName.txt");
+
+	if (!ifs.is_open()){
+		cout << "open fileName.txt error" << endl;
+	}
+
+	string filename;
+	while (ifs >> filename)
+	{
+		files.push_back(filename);
+	}
+	
+	remove("fileName.txt");
+}

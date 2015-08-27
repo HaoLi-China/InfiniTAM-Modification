@@ -103,6 +103,7 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Engine\ImageFileEngine.cpp" />
     <ClCompile Include="Engine\ImageSourceEngine.cpp" />
     <ClCompile Include="Engine\IMUSourceEngine.cpp" />
     <ClCompile Include="Engine\Kinect2Engine.cpp" />
@@ -136,6 +137,7 @@
     <ClCompile Include="Utils\FileUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Engine\ImageFileEngine.h" />
     <ClInclude Include="Engine\ImageSourceEngine.h" />
     <ClInclude Include="Engine\IMUSourceEngine.h" />
     <ClInclude Include="Engine\Kinect2Engine.h" />

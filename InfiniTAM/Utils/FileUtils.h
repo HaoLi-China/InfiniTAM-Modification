@@ -3,14 +3,20 @@
 #pragma once
 
 #include <stdio.h>
+#include <vector>
+#include <string>
+#include <iostream>
 
 #include "../ITMLib/Utils/ITMLibDefines.h"
+
+using namespace std;
 
 void SaveImageToFile(const ITMUChar4Image* image, const char* fileName, bool flipVertical = false);
 void SaveImageToFile(const ITMShortImage* image, const char* fileName);
 void SaveImageToFile(const ITMFloatImage* image, const char* fileName);
 bool ReadImageFromFile(ITMUChar4Image* image, const char* fileName);
 bool ReadImageFromFile(ITMShortImage *image, const char *fileName);
+void GetAllFiles(string path, vector<string>& files);
 
 template <typename T> void ReadFromBIN(T *data, int dataSize, const char *fileName)
 {
