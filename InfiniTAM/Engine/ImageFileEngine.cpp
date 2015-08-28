@@ -23,7 +23,8 @@ ImageFileEngine::ImageFileEngine(const char *calibFilename, const char *depthDat
 	}
 
 	imageSize_d = Vector2i(512, 424);
-	imageSize_rgb = Vector2i(1920, 1080);
+	//imageSize_rgb = Vector2i(1920, 1080);
+	imageSize_rgb = Vector2i(640, 360);
 
 	nDepthMinReliableDistance = 500;
 	nDepthMaxDistance = USHRT_MAX;
