@@ -125,6 +125,8 @@
     <ClCompile Include="ITMLib\Engine\ITMDepthTracker.cpp" />
     <ClCompile Include="ITMLib\Engine\ITMIMUTracker.cpp" />
     <ClCompile Include="ITMLib\Engine\ITMMainEngine.cpp" />
+    <ClCompile Include="ITMLib\Engine\ITMMotionAnalysis.cpp" />
+    <ClCompile Include="ITMLib\Engine\ITMMotionOptimization.cpp" />
     <ClCompile Include="ITMLib\Engine\ITMRenTracker.cpp" />
     <ClCompile Include="ITMLib\Engine\ITMTrackerFactory.cpp" />
     <ClCompile Include="ITMLib\Engine\ITMTrackingController.cpp" />
@@ -185,6 +187,7 @@
     <ClInclude Include="ITMLib\Engine\ITMLowLevelEngine.h" />
     <ClInclude Include="ITMLib\Engine\ITMMainEngine.h" />
     <ClInclude Include="ITMLib\Engine\ITMMeshingEngine.h" />
+    <ClInclude Include="ITMLib\Engine\ITMMotionAnalysis.h" />
     <ClInclude Include="ITMLib\Engine\ITMRenTracker.h" />
     <ClInclude Include="ITMLib\Engine\ITMSceneReconstructionEngine.h" />
     <ClInclude Include="ITMLib\Engine\ITMSwappingEngine.h" />

@@ -151,6 +151,12 @@
     <ClCompile Include="Engine\ImageFileEngine.cpp">
       <Filter>Engine\Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ITMLib\Engine\ITMMotionOptimization.cpp">
+      <Filter>ITMLib\Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="ITMLib\Engine\ITMMotionAnalysis.cpp">
+      <Filter>ITMLib\Engine</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\OpenNIEngine.h">
@@ -434,6 +440,9 @@
     </ClInclude>
     <ClInclude Include="Engine\ImageFileEngine.h">
       <Filter>Engine\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ITMLib\Engine\ITMMotionAnalysis.h">
+      <Filter>ITMLib\Engine</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
