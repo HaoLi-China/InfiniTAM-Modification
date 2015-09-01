@@ -114,6 +114,10 @@ double ITMMotionAnalysis::computeDataTerm(ITMPointCloud &visiblePointClound, ITM
 
 			if (!((pt_image.x < 1) || (pt_image.x > newDepthImage->noDims.x - 2) || (pt_image.y < 1) || (pt_image.y > newDepthImage->noDims.y - 2))){
 				npoint[i].z = depth[x + y * newDepthImage->noDims.x];
+				if(npoint[i].z == -1){
+					continue;
+				}
+
 				npoint[i].x = npoint[i].z * ((float(x) - projParams_d.z) / projParams_d.x);
 				npoint[i].y = npoint[i].z * ((float(y) - projParams_d.w) / projParams_d.y);
 				npoint[i].w = 1.0;
