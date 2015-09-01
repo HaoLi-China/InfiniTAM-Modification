@@ -2,6 +2,6 @@
 
 using namespace ITMLib::Engine;
 
-void ITMMotionAnalysis::optimizeEnergyFunction(ITMScene<NodeInfo, ITMVoxelIndex> *warpScene, ITMPointCloud &visiblePointClound, ITMFloatImage *newDepthImage){
+void ITMMotionAnalysis::optimizeEnergyFunction(ITMPointCloud &visiblePointClound, ITMFloatImage *newDepthImage){
 
 }

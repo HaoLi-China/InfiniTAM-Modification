@@ -55,6 +55,27 @@
     <Filter Include="ITMLib\Objects\PlainVoxelArray">
       <UniqueIdentifier>{85026f07-5c4c-4518-91e8-73a350f87441}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Utils\KDtree">
+      <UniqueIdentifier>{9d737e05-d87b-484d-9257-3d420edd9ebd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utils\KDtree\ANN">
+      <UniqueIdentifier>{dfaa2c5e-1f5b-4b0b-aec8-79e56de8c6c3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utils\KDtree\ETH_Kd_Tree">
+      <UniqueIdentifier>{f05b45a9-cc22-4c5f-b935-8a14a227ff1c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utils\KDtree\FLANN">
+      <UniqueIdentifier>{043a5a54-788b-4b25-83e7-0d7d3ad44051}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utils\KDtree\FLANN\algorithms">
+      <UniqueIdentifier>{d6d0cbeb-1231-4b8e-8341-ee4f5bbc1ca2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utils\KDtree\FLANN\nn">
+      <UniqueIdentifier>{cb530c8f-59ef-40c0-8b12-cd0ea77838c1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utils\KDtree\FLANN\util">
+      <UniqueIdentifier>{301fbb73-7ef7-47b0-a157-14352018d25a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\OpenNIEngine.cpp">
@@ -156,6 +177,57 @@
     </ClCompile>
     <ClCompile Include="ITMLib\Engine\ITMMotionAnalysis.cpp">
       <Filter>ITMLib\Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\KDtree\kdtree_search.cpp">
+      <Filter>Utils\KDtree</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\KDtree\kdtree_search_eth.cpp">
+      <Filter>Utils\KDtree</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\KDtree\ANN\ANN.cpp">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\KDtree\ANN\bd_fix_rad_search.cpp">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\KDtree\ANN\bd_pr_search.cpp">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\KDtree\ANN\bd_search.cpp">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\KDtree\ANN\bd_tree.cpp">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\KDtree\ANN\brute.cpp">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\KDtree\ANN\kd_dump.cpp">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\KDtree\ANN\kd_fix_rad_search.cpp">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\KDtree\ANN\kd_pr_search.cpp">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\KDtree\ANN\kd_search.cpp">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\KDtree\ANN\kd_split.cpp">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\KDtree\ANN\kd_tree.cpp">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\KDtree\ANN\kd_util.cpp">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\KDtree\ANN\perf.cpp">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\KDtree\ETH_Kd_Tree\kdTree.cpp">
+      <Filter>Utils\KDtree\ETH_Kd_Tree</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -443,6 +515,159 @@
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\ITMMotionAnalysis.h">
       <Filter>ITMLib\Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\kdtree_search.h">
+      <Filter>Utils\KDtree</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\kdtree_search_eth.h">
+      <Filter>Utils\KDtree</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\ANN\ANN.h">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\ANN\ANNperf.h">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\ANN\ANNx.h">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\ANN\bd_tree.h">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\ANN\kd_fix_rad_search.h">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\ANN\kd_pr_search.h">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\ANN\kd_search.h">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\ANN\kd_split.h">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\ANN\kd_tree.h">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\ANN\kd_util.h">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\ANN\pr_queue.h">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\ANN\pr_queue_k.h">
+      <Filter>Utils\KDtree\ANN</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\ETH_Kd_Tree\kdTree.h">
+      <Filter>Utils\KDtree\ETH_Kd_Tree</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\ETH_Kd_Tree\PriorityQueue.h">
+      <Filter>Utils\KDtree\ETH_Kd_Tree</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\ETH_Kd_Tree\QueryGrid.h">
+      <Filter>Utils\KDtree\ETH_Kd_Tree</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\ETH_Kd_Tree\vector2D.h">
+      <Filter>Utils\KDtree\ETH_Kd_Tree</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\ETH_Kd_Tree\vector3D.h">
+      <Filter>Utils\KDtree\ETH_Kd_Tree</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\config.h">
+      <Filter>Utils\KDtree\FLANN</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\defines.h">
+      <Filter>Utils\KDtree\FLANN</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\flann.hpp">
+      <Filter>Utils\KDtree\FLANN</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\general.h">
+      <Filter>Utils\KDtree\FLANN</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\algorithms\all_indices.h">
+      <Filter>Utils\KDtree\FLANN\algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\algorithms\autotuned_index.h">
+      <Filter>Utils\KDtree\FLANN\algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\algorithms\center_chooser.h">
+      <Filter>Utils\KDtree\FLANN\algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\algorithms\composite_index.h">
+      <Filter>Utils\KDtree\FLANN\algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\algorithms\dist.h">
+      <Filter>Utils\KDtree\FLANN\algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\algorithms\hierarchical_clustering_index.h">
+      <Filter>Utils\KDtree\FLANN\algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\algorithms\kdtree_index.h">
+      <Filter>Utils\KDtree\FLANN\algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\algorithms\kdtree_single_index.h">
+      <Filter>Utils\KDtree\FLANN\algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\algorithms\kmeans_index.h">
+      <Filter>Utils\KDtree\FLANN\algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\algorithms\linear_index.h">
+      <Filter>Utils\KDtree\FLANN\algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\algorithms\lsh_index.h">
+      <Filter>Utils\KDtree\FLANN\algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\algorithms\nn_index.h">
+      <Filter>Utils\KDtree\FLANN\algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\nn\ground_truth.h">
+      <Filter>Utils\KDtree\FLANN\nn</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\nn\index_testing.h">
+      <Filter>Utils\KDtree\FLANN\nn</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\util\allocator.h">
+      <Filter>Utils\KDtree\FLANN\util</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\util\any.h">
+      <Filter>Utils\KDtree\FLANN\util</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\util\dynamic_bitset.h">
+      <Filter>Utils\KDtree\FLANN\util</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\util\heap.h">
+      <Filter>Utils\KDtree\FLANN\util</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\util\logger.h">
+      <Filter>Utils\KDtree\FLANN\util</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\util\lsh_table.h">
+      <Filter>Utils\KDtree\FLANN\util</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\util\matrix.h">
+      <Filter>Utils\KDtree\FLANN\util</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\util\params.h">
+      <Filter>Utils\KDtree\FLANN\util</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\util\random.h">
+      <Filter>Utils\KDtree\FLANN\util</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\util\result_set.h">
+      <Filter>Utils\KDtree\FLANN\util</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\util\sampling.h">
+      <Filter>Utils\KDtree\FLANN\util</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\util\saving.h">
+      <Filter>Utils\KDtree\FLANN\util</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\util\serialization.h">
+      <Filter>Utils\KDtree\FLANN\util</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\FLANN\util\timer.h">
+      <Filter>Utils\KDtree\FLANN\util</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
