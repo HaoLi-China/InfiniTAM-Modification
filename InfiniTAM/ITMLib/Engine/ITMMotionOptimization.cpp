@@ -1,6 +1,7 @@
 #include "ITMMotionAnalysis.h"
 #include "../../../3rd_libLBFGS/lbfgs.h"
 #include "../../Utils/KDtree/kdtree_search_eth.h"
+#include <map>
 
 using namespace ITMLib::Engine;
 
@@ -21,10 +22,11 @@ struct MotionsData
 	std::vector<int> visibleNodeIndex; //Visible Nodeinfo Indices
 
 	std::vector<Vector3f> points; // n, canonical model points
+	std::vector<Vector3f> normals; // n, canonical model normals
 	std::vector<Vector3f> dpoints; // depth image points
 	std::vector<Vector3f> vpoints; // visible points
 	std::vector<Vector3f> vnormals; // visible points' normals
-	std::vector<bool> visibles; // n, visible nodes
+	std::vector<int> visibles; // n, visible nodes
 	std::vector<double> x0; // 6 * n warp transformations, n represents all nodes
 
 	std::vector<std::vector<unsigned int>> neighborhood;  // n, neighbors of each node
@@ -62,6 +64,7 @@ MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, const ITMPointCloud 
 		int nodeindex = vilidNodeIndex[i];
 		Vector3f pt(allNodeinfo[nodeindex].dg_v.x, allNodeinfo[nodeindex].dg_v.y, allNodeinfo[nodeindex].dg_v.z);
 		points.push_back(pt);
+		normals.push_back(Vector3f(0,0,0));
 
 		pointSet[i].x = allNodeinfo[nodeindex].dg_v.x;
 		pointSet[i].y = allNodeinfo[nodeindex].dg_v.y;
@@ -101,10 +104,10 @@ MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, const ITMPointCloud 
 	malys->getVisibleNodeInfo(visiblePointClound, visibleNodeIndex);
 
 	for (int i = 0; i < vilidNodeIndex.size(); i++){
-		visibles.push_back(false);
+		visibles.push_back(-1);
 		for (int j = 0; j < visibleNodeIndex.size(); i++){
 			if (vilidNodeIndex[i] == visibleNodeIndex[j]){
-				visibles[i] = true;
+				visibles[i] = j;
 			}
 		}
 	}
@@ -113,6 +116,15 @@ MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, const ITMPointCloud 
 		if (visibleNodeIndex[i] != -1){
 			vpoints.push_back(Vector3f(vpoint[i].x, vpoint[i].y, vpoint[i].z));
 			vnormals.push_back(Vector3f(vnormal[i].x, vnormal[i].y, vnormal[i].z));
+		}
+	}
+
+	for (int i = 0; i < visibles.size(); i++){
+		if (visibles[i]!=-1){
+			int ind = visibles[i];
+			normals[i].x = vnormals[ind].x;
+			normals[i].y = vnormals[ind].y;
+			normals[i].z = vnormals[ind].z;
 		}
 	}
 
@@ -175,7 +187,6 @@ void MotionsData::updatePointsNormals()
 	ITMRGBDCalib *calib;
 	malys->getCalib(calib);
 
-	int count = 0;
 	for (int i = 0; i < points.size(); i++){
 		//Vector4f pt_tem(points[i].x, points[i].y, points[i].z, 1.0);
 		//Vector4f pt = pt_tem * mtf;
@@ -184,25 +195,23 @@ void MotionsData::updatePointsNormals()
 		//points[i].y = pt.y;
 		//points[i].z = pt.z;
 
-		if (visibles[i]){
+		if (visibles[i]!=-1){
 			Transformation tf = { x0[6 * i], x0[6 * i + 1], x0[6 * i + 2], x0[6 * i + 3], x0[6 * i + 4], x0[6 * i + 5] };
 			Matrix4f mtf;
 			malys->Transformation2Matrix4(tf, mtf);
 
-			Vector4f vpt_tem(vpoints[count].x, vpoints[count].y, vpoints[count].z, 1.0);
+			Vector4f vpt_tem(vpoints[visibles[i]].x, vpoints[visibles[i]].y, vpoints[visibles[i]].z, 1.0);
 			Vector4f vpt = vpt_tem * mtf;
-			Vector4f vn_tem(vpoints[count].x, vpoints[count].y, vpoints[count].z, 1.0);
+			Vector4f vn_tem(vpoints[visibles[i]].x, vpoints[visibles[i]].y, vpoints[visibles[i]].z, 1.0);
 			Vector4f vn = vpt_tem * mtf;
 
-			vpoints[count].x = vpt.x;
-			vpoints[count].y = vpt.y;
-			vpoints[count].z = vpt.z;
+			vpoints[visibles[i]].x = vpt.x;
+			vpoints[visibles[i]].y = vpt.y;
+			vpoints[visibles[i]].z = vpt.z;
 
-			vnormals[count].x = vn.x;
-			vnormals[count].y = vn.y;
-			vnormals[count].z = vn.z;
-
-			count++;
+			vnormals[visibles[i]].x = vn.x;
+			vnormals[visibles[i]].y = vn.y;
+			vnormals[visibles[i]].z = vn.z;
 		}
 	}
 }
@@ -257,7 +266,7 @@ static lbfgsfloatval_t motions_evaluate(
 	const std::vector<Vector3f>& dpoints = d->dpoints;
 	//const std::vector<unsigned int>& corriIndices = d->corriIndices;
 	const std::vector<double>& x0 = d->x0;
-	const std::vector<bool>& visibles = d->visibles;
+	const std::vector<int>& visibles = d->visibles;
 	const std::vector<std::vector<unsigned int>>& neighborhood = d->neighborhood;
 
 	//////////////////////////////////////////////////////////////////////////

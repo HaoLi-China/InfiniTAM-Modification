@@ -67,6 +67,8 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 
 	fusionActive = true;
 	mainProcessingActive = true;
+
+	motionAnalysis = new ITMMotionAnalysis(settings, calib, false);
 }
 
 ITMMainEngine::~ITMMainEngine()

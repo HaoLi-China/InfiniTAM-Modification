@@ -41,7 +41,7 @@ namespace ITMLib
 		class ITMMotionAnalysis
 		{
 		public:
-			ITMMotionAnalysis(const ITMLibSettings *settings, ITMRGBDCalib *calib, bool useSparseNodes);
+			ITMMotionAnalysis(const ITMLibSettings *settings, const ITMRGBDCalib *calib, bool useSparseNodes);
 			~ITMMotionAnalysis();
 			void optimizeEnergyFunction(ITMPointCloud &visiblePointClound, ITMFloatImage *newDepthImage);
 			void getAllNodeinfo(NodeInfo *nodeinfo);

@@ -6,9 +6,9 @@
 
 using namespace ITMLib::Engine;
 
-ITMMotionAnalysis::ITMMotionAnalysis(const ITMLibSettings *settings, ITMRGBDCalib *calib, bool useSparseNodes){
+ITMMotionAnalysis::ITMMotionAnalysis(const ITMLibSettings *settings, const ITMRGBDCalib *calib, bool useSparseNodes){
 	this->useSparseNodes = useSparseNodes;
-	this->calib = calib;
+	this->calib = const_cast<ITMRGBDCalib*>(calib);
 	entryList = (NodeHashEntry*)malloc((NODE_BUCKET_NUM*NODE_ENTRY_NUM_PER_BUCKET + NODE_EXCESS_LIST_SIZE)*sizeof(NodeHashEntry));
 	allNodeinfo = (NodeInfo*)malloc((NODE_BUCKET_NUM*NODE_ENTRY_NUM_PER_BUCKET + NODE_EXCESS_LIST_SIZE)*sizeof(NodeInfo));
 

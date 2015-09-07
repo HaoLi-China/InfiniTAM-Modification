@@ -72,6 +72,8 @@ namespace ITMLib
 			ITMRenderState *renderState_live;
 			ITMRenderState *renderState_freeview;
 
+			ITMMotionAnalysis *motionAnalysis;// Hao added it
+
 		public:
 			enum GetImageType
 			{

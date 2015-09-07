@@ -101,6 +101,8 @@
 #include "Engine/DeviceSpecific/Metal/ITMMeshingEngine_CPU.h"
 #endif
 
+#include "Engine/ITMMotionAnalysis.h" //Hao added it
+
 #include "Engine/ITMDenseMapper.h"
 #include "Engine/ITMMainEngine.h"
 
