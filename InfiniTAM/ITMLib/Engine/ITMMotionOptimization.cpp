@@ -14,7 +14,7 @@ struct MotionsData
 	std::vector<Vector3f> points; // canonical model points
 	std::vector<Vector3f> normals; // canonical model normals
 	std::vector<Vector3f> dpoints; // depth image points
-	std::vector<unsigned int> corrrIndices; // pairs of canonical model points and depth image points
+	std::vector<unsigned int> corriIndices; // pairs of canonical model points and depth image points
 	std::vector<double> x0; // 6 * n warp transformations, n represents all nodes
 	std::vector<bool> visibles; //n, visible nodes
 	std::vector<std::vector<unsigned int>> neighborhood;  // n, neighbors of each node
@@ -50,7 +50,7 @@ static lbfgsfloatval_t motions_evaluate(
 	const std::vector<Vector3f>& points = d->points;
 	const std::vector<Vector3f>& normals = d->normals;
 	const std::vector<Vector3f>& dpoints = d->dpoints;
-	const std::vector<unsigned int>& corrrIndices = d->corrrIndices;
+	const std::vector<unsigned int>& corriIndices = d->corriIndices;
 	const std::vector<double>& x0 = d->x0;
 	const std::vector<bool>& visibles = d->visibles;
 	const std::vector<std::vector<unsigned int>>& neighborhood = d->neighborhood;
