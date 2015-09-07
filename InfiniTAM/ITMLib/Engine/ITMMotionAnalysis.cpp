@@ -83,6 +83,18 @@ double ITMMotionAnalysis::Tukey(double value){
 	return 0;
 }
 
+void ITMMotionAnalysis::getAllNodeinfo(NodeInfo *nodeinfo){
+	nodeinfo = this->allNodeinfo;
+}
+
+void ITMMotionAnalysis::getAllNodeHashEntry(NodeHashEntry *entryList){
+	entryList = this->entryList;
+}
+
+void ITMMotionAnalysis::getCalib(ITMRGBDCalib *calib){
+	calib = this->calib;
+}
+
 //compute the data term
 double ITMMotionAnalysis::computeDataTerm(ITMPointCloud &visiblePointClound, ITMFloatImage *newDepthImage, ITMPointCloud &livePointClound){
 	Vector4f projParams_d = calib->intrinsics_d.projectionParamsSimple.all;
@@ -104,6 +116,7 @@ double ITMMotionAnalysis::computeDataTerm(ITMPointCloud &visiblePointClound, ITM
 			Matrix4f mtf;
 			Transformation2Matrix4(tf, mtf);
 			Vector4f vpt = vpoint[i] * mtf;
+			Vector4f vn = vnormal[i] * mtf;
 
 			Vector2f pt_image;
 			pt_image.x = projParams_d.x * vpt.x / vpt.z + projParams_d.z;
@@ -128,7 +141,7 @@ double ITMMotionAnalysis::computeDataTerm(ITMPointCloud &visiblePointClound, ITM
 			}
 
 			Vector3f delta(vpt.x - npoint[i].x, vpt.y - npoint[i].y, vpt.z - npoint[i].z);
-			double dot_result = vnormal[i].x * delta.x + vnormal[i].y * delta.y + vnormal[i].z * delta.z;
+			double dot_result = vn.x * delta.x + vn.y * delta.y + vn.z * delta.z;
 
 			result += (dot_result * dot_result);
 		}
@@ -220,12 +233,12 @@ void ITMMotionAnalysis::Transformation2Matrix4(Transformation &tf, Matrix4f &mtf
 	mtf.setIdentity();
 
 	// Assuming the angles are in radians.
-	double ch = cos(tf.rz);
-	double sh = sin(tf.rz);
-	double ca = cos(tf.rx);
-	double sa = sin(tf.rx);
-	double cb = cos(tf.ry);
-	double sb = sin(tf.ry);
+	double ch = cos(tf.ry);
+	double sh = sin(tf.ry);
+	double ca = cos(tf.rz);
+	double sa = sin(tf.rz);
+	double cb = cos(tf.rx);
+	double sb = sin(tf.rx);
 
 	mtf.m00 = ch * ca;
 	mtf.m01 = sh*sb - ch*sa*cb;
@@ -263,7 +276,7 @@ void ITMMotionAnalysis::Matrix42Transformation(Matrix4f &mtf, Transformation &tf
 	tf.rz = asin(mtf.m10);
 }
 
-void ITMMotionAnalysis::getVisibleNodeInfo(ITMPointCloud &visiblePointClound, std::vector<int> &visibleNodeIndex){
+void ITMMotionAnalysis::getVisibleNodeInfo(const ITMPointCloud &visiblePointClound, std::vector<int> &visibleNodeIndex){
 	float voxelSize = 0.125f;
 	Vector4f *vpoint = visiblePointClound.locations->GetData(MEMORYDEVICE_CPU);
 
@@ -280,6 +293,8 @@ void ITMMotionAnalysis::getVisibleNodeInfo(ITMPointCloud &visiblePointClound, st
 
 		int res = findNodeIndex(nodePos, entryList);
 
-		visibleNodeIndex.push_back(res);
+		if (res!=-1){
+			visibleNodeIndex.push_back(res);
+		}
 	}
 }

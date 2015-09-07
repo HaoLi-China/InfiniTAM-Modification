@@ -44,6 +44,12 @@ namespace ITMLib
 			ITMMotionAnalysis(const ITMLibSettings *settings, ITMRGBDCalib *calib, bool useSparseNodes);
 			~ITMMotionAnalysis();
 			void optimizeEnergyFunction(ITMPointCloud &visiblePointClound, ITMFloatImage *newDepthImage);
+			void getAllNodeinfo(NodeInfo *nodeinfo);
+			void getAllNodeHashEntry(NodeHashEntry *entryList);
+			void getCalib(ITMRGBDCalib *calib);
+			void getVisibleNodeInfo(const ITMPointCloud &visiblePointClound, std::vector<int> &visibleNodeIndex);
+			void Transformation2Matrix4(Transformation &tf, Matrix4f &mtf);
+			void Matrix42Transformation(Matrix4f &mtf, Transformation &tf);
 
 		private:
 			bool useSparseNodes;
@@ -62,9 +68,6 @@ namespace ITMLib
 			double computeRegularizationTerm();
 			//double computeTukeyPenalty(Vector3f &n_u, Vector3f &v_u, Vector3f &vl_uw);
 			//double computeHuberPenalty(Matrix4f &T_ic1, Vector3f &dg_v1, Matrix4f &T_ic2, Vector3f &dg_v2);
-			void Transformation2Matrix4(Transformation &tf, Matrix4f &mtf);
-			void Matrix42Transformation(Matrix4f &mtf, Transformation &tf);
-			void getVisibleNodeInfo(ITMPointCloud &visiblePointClound, std::vector<int> &visibleNodeIndex);
 		};
 	}
 }

@@ -67,6 +67,8 @@ public:
 	// fixed-radius kNN	search. Search for all points in the range.
 	// NOTE: *squared* radius of query ball
 	virtual void find_points_in_radius(const Vector3f& p, double squared_radius, std::vector<Vector3f>& neighbors) const = 0;
+	virtual void find_points_in_radius(const Vector3f& p, double squared_radius, std::vector<unsigned int>& neighbor_indices) const = 0;
+
 	virtual void find_points_in_radius(const Vector3f& p, double squared_radius, std::vector<Vector3f>& neighbors, std::vector<double>& squared_distances) const = 0;
 };
 #endif

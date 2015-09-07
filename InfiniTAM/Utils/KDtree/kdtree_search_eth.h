@@ -43,6 +43,10 @@ public:
 		) const ;
 
 	void find_points_in_radius(const Vector3f& p, double squared_radius,
+		std::vector<unsigned int>& neighbor_indices
+		) const;
+
+	void find_points_in_radius(const Vector3f& p, double squared_radius,
 		std::vector<Vector3f>& neighbors, std::vector<double>& squared_distances
 		) const ;
 
