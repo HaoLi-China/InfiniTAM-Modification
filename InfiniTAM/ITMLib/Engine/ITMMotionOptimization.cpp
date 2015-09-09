@@ -9,9 +9,10 @@ using namespace ITMLib::Engine;
 // motions information
 struct MotionsData
 {
-	MotionsData(ITMMotionAnalysis *motionAnalysis, const ITMPointCloud &visiblePointClound, ITMFloatImage *newDepthImage);
+	MotionsData(ITMMotionAnalysis *motionAnalysis, const ITMPointCloud *visiblePointClound, ITMFloatImage *newDepthImage);
 	void updatePointsNormals();  // using new warp transformations to compute the points and normals of canonical model
 	void computeDpoints(float *depth);  // compute corresponding points of depth image
+	void updateAllWarpInfo(double *x);
 
 	//float computeDataTerm(const lbfgsfloatval_t* x);
 	//float computeRegTerm(const lbfgsfloatval_t* x);
@@ -39,7 +40,7 @@ struct MotionsData
 	int depth_image_height;
 };
 
-MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, const ITMPointCloud &visiblePointClound, ITMFloatImage *newDepthImage)
+MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, const ITMPointCloud *visiblePointClound, ITMFloatImage *newDepthImage)
 {
 	lambda = 1.0;
 	depth_image_width = newDepthImage->noDims.x;
@@ -99,8 +100,8 @@ MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, const ITMPointCloud 
 	free(pointSet);
 	pointSet = NULL;
 
-	Vector4f *vpoint = visiblePointClound.locations->GetData(MEMORYDEVICE_CPU);
-	Vector4f *vnormal = visiblePointClound.colours->GetData(MEMORYDEVICE_CPU);
+	Vector4f *vpoint = visiblePointClound->locations->GetData(MEMORYDEVICE_CPU);
+	Vector4f *vnormal = visiblePointClound->colours->GetData(MEMORYDEVICE_CPU);
 	float *depth = newDepthImage->GetData(MEMORYDEVICE_CPU);
 
 	std::vector<int> visibleNodeIndex;
@@ -115,7 +116,7 @@ MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, const ITMPointCloud 
 		}
 	}
 
-	for (int i = 0; i < visiblePointClound.noTotalPoints; i++){
+	for (int i = 0; i < visiblePointClound->noTotalPoints; i++){
 		if (visibleNodeIndex[i] != -1){
 			vpoints.push_back(Vector3f(vpoint[i].x, vpoint[i].y, vpoint[i].z));
 			vnormals.push_back(Vector3f(vnormal[i].x, vnormal[i].y, vnormal[i].z));
@@ -133,6 +134,23 @@ MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, const ITMPointCloud 
 
 	updatePointsNormals();
 	computeDpoints(depth);
+}
+
+//update all warp info in nodes' info
+void MotionsData::updateAllWarpInfo(double *x){
+	NodeInfo *allNodeinfo = NULL;
+	malys->getAllNodeinfo(allNodeinfo);
+
+	for (int i = 0; i < vilidNodeIndex.size(); i++){
+		int nodeindex = vilidNodeIndex[i];
+
+		allNodeinfo[nodeindex].dg_se3.rx = x[6*i];
+		allNodeinfo[nodeindex].dg_se3.ry = x[6 * i + 1];
+		allNodeinfo[nodeindex].dg_se3.rz = x[6 * i + 2];
+		allNodeinfo[nodeindex].dg_se3.tx = x[6 * i + 3];
+		allNodeinfo[nodeindex].dg_se3.ty = x[6 * i + 4];
+		allNodeinfo[nodeindex].dg_se3.tz = x[6 * i + 5];
+	}
 }
 
 /*
@@ -358,7 +376,7 @@ static lbfgsfloatval_t motions_evaluate(
 	}
 
 	// reg term
-	for (int i = 0; i < points.size(); i++){
+	for (int i = 0; i < N / 6; i++){
 		const std::vector<unsigned int>& neighbors = neighborhood[i];
 		Transformation tf_ic = { x[6 * i], x[6 * i + 1], x[6 * i + 2], x[6 * i + 3], x[6 * i + 4], x[6 * i + 5] };
 		Matrix4f ic;
@@ -464,7 +482,7 @@ static int motions_progress(
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // main optimization function
-void ITMMotionAnalysis::optimizeEnergyFunction(ITMPointCloud &visiblePointClound, ITMFloatImage *newDepthImage)
+void ITMMotionAnalysis::optimizeEnergyFunction(const ITMPointCloud *visiblePointClound, ITMFloatImage *newDepthImage)
 {
 	MotionsData data(this, visiblePointClound, newDepthImage);
 	data.lambda = 1.0;
@@ -495,9 +513,5 @@ void ITMMotionAnalysis::optimizeEnergyFunction(ITMPointCloud &visiblePointClound
 	printf("  fx = %f\n", fx);
 
 	// assign new warp transformation from x
-	/*
-
-	need to fill!!!!!!!!!!!!!!!!!!!!!!
-
-	*/
+	data.updateAllWarpInfo(x);
 }

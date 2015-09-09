@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include<vector>
+
 #include "../ITMLib.h"
 #include "../Utils/ITMLibSettings.h"
 
@@ -120,6 +122,9 @@ namespace ITMLib
 			void turnOnMainProcessing();
 			void turnOffMainProcessing();
 
+			void getSurfacePoints(std::vector<Vector3f> &points, std::vector<Vector3f> &normals, std::vector<short> &sdf_s, const bool withNormals = false, const bool withSDFs = false);//Hao added it
+			void transformVoxels(const std::vector<Vector3f> &points, const std::vector<short> &sdf_s, const std::vector<Transformation> &tfs);
+			void resetAllVoxels();
 			/** \brief Constructor
 			    Ommitting a separate image size for the depth images
 			    will assume same resolution as for the RGB images.

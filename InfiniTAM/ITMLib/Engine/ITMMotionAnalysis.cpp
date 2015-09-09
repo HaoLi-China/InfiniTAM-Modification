@@ -38,6 +38,45 @@ void ITMMotionAnalysis::resetAllNodeinfo()
 	memset(allNodeinfo, 0, (NODE_BUCKET_NUM*NODE_ENTRY_NUM_PER_BUCKET + NODE_EXCESS_LIST_SIZE)*sizeof(NodeHashEntry));
 }
 
+//set all nodes' info
+void ITMMotionAnalysis::setAllNodeinfo(const std::vector<Vector3f> &points){
+	int offsetCount = 0;
+
+	for (int i = 0; i < points.size(); i++){
+		allNodeinfo[i].dg_v.x = points[i].x;
+		allNodeinfo[i].dg_v.y = points[i].y;
+		allNodeinfo[i].dg_v.z = points[i].z;
+		allNodeinfo[i].dg_w.x = 0;
+		allNodeinfo[i].dg_w.y = 0;
+		allNodeinfo[i].dg_w.z = 0;
+		allNodeinfo[i].dg_se3 = {0,0,0,0,0,0};
+
+		int res = findNodeIndex(points[i], entryList);
+		if (entryList[res].ptr == -2){
+			entryList[res].ptr = i;
+		}
+		else{
+			int offsetExcess = entryList[res].offset - 1;
+			while (offsetExcess >= 0){
+				offsetExcess = entryList[res + offsetExcess].offset - 1;
+			}
+			entryList[res + offsetExcess].offset = offsetCount;
+			entryList[res + offsetExcess].ptr = i;
+			offsetCount++;
+		}
+	}
+}
+
+//get transformation of all nodes
+void ITMMotionAnalysis::getAllTransformation(const std::vector<Vector3f> &points, std::vector<Transformation> &tfs){
+	for (int i = 0; i < points.size(); i++){
+		int res = findNodeIndex(points[i], entryList);
+		int ptr = entryList[res].ptr;
+		Transformation tf = allNodeinfo[ptr].dg_se3;
+		tfs.push_back(tf);
+	}
+}
+
 int ITMMotionAnalysis::hashIndex(const Vector3f nodePos, const int hashMask) {
 	return ((uint)(((uint)(nodePos.x * 73856093)) ^ ((uint)(nodePos.y * 19349669)) ^ ((uint)(nodePos.z * 83492791))) & (uint)hashMask);
 }
@@ -96,10 +135,10 @@ void ITMMotionAnalysis::getCalib(ITMRGBDCalib *calib){
 }
 
 //compute the data term
-double ITMMotionAnalysis::computeDataTerm(ITMPointCloud &visiblePointClound, ITMFloatImage *newDepthImage, ITMPointCloud &livePointClound){
+double ITMMotionAnalysis::computeDataTerm(const ITMPointCloud *visiblePointClound, ITMFloatImage *newDepthImage, ITMPointCloud &livePointClound){
 	Vector4f projParams_d = calib->intrinsics_d.projectionParamsSimple.all;
-	Vector4f *vpoint = visiblePointClound.locations->GetData(MEMORYDEVICE_CPU);
-	Vector4f *vnormal = visiblePointClound.colours->GetData(MEMORYDEVICE_CPU);
+	Vector4f *vpoint = visiblePointClound->locations->GetData(MEMORYDEVICE_CPU);
+	Vector4f *vnormal = visiblePointClound->colours->GetData(MEMORYDEVICE_CPU);
 	Vector4f *npoint = livePointClound.locations->GetData(MEMORYDEVICE_CPU);
 	float *depth = newDepthImage->GetData(MEMORYDEVICE_CPU);
 	double result = 0;
@@ -108,7 +147,7 @@ double ITMMotionAnalysis::computeDataTerm(ITMPointCloud &visiblePointClound, ITM
 	getVisibleNodeInfo(visiblePointClound, visibleNodeIndex);
 
 	//compute each sub term
-	for (int i = 0; i < visiblePointClound.noTotalPoints; i++){
+	for (int i = 0; i < visiblePointClound->noTotalPoints; i++){
 		if (visibleNodeIndex[i] != -1){
 			int vnindex = visibleNodeIndex[i];
 			int ptr = entryList[vnindex].ptr;
@@ -229,7 +268,7 @@ double ITMMotionAnalysis::computeRegularizationTerm(){
 //	return 0;
 //}
 
-void ITMMotionAnalysis::Transformation2Matrix4(Transformation &tf, Matrix4f &mtf){
+void ITMMotionAnalysis::Transformation2Matrix4(const Transformation &tf, Matrix4f &mtf){
 	mtf.setIdentity();
 
 	// Assuming the angles are in radians.
@@ -254,7 +293,7 @@ void ITMMotionAnalysis::Transformation2Matrix4(Transformation &tf, Matrix4f &mtf
 	mtf.m23 = tf.tz;
 }
 
-void ITMMotionAnalysis::Matrix42Transformation(Matrix4f &mtf, Transformation &tf){
+void ITMMotionAnalysis::Matrix42Transformation(const Matrix4f &mtf, Transformation &tf){
 	tf.tx = mtf.m03;
 	tf.ty = mtf.m13;
 	tf.tz = mtf.m23;
@@ -276,11 +315,11 @@ void ITMMotionAnalysis::Matrix42Transformation(Matrix4f &mtf, Transformation &tf
 	tf.rz = asin(mtf.m10);
 }
 
-void ITMMotionAnalysis::getVisibleNodeInfo(const ITMPointCloud &visiblePointClound, std::vector<int> &visibleNodeIndex){
+void ITMMotionAnalysis::getVisibleNodeInfo(const ITMPointCloud *visiblePointClound, std::vector<int> &visibleNodeIndex){
 	float voxelSize = 0.125f;
-	Vector4f *vpoint = visiblePointClound.locations->GetData(MEMORYDEVICE_CPU);
+	Vector4f *vpoint = visiblePointClound->locations->GetData(MEMORYDEVICE_CPU);
 
-	for (int i = 0; i < visiblePointClound.noTotalPoints; i++){
+	for (int i = 0; i < visiblePointClound->noTotalPoints; i++){
 		Vector3f pt;
 		pt.x = vpoint[i].x;
 		pt.y = vpoint[i].y;
