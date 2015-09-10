@@ -44,9 +44,9 @@ namespace ITMLib
 			ITMMotionAnalysis(const ITMLibSettings *settings, const ITMRGBDCalib *calib, bool useSparseNodes);
 			~ITMMotionAnalysis();
 			void optimizeEnergyFunction(const ITMPointCloud *visiblePointClound, ITMFloatImage *newDepthImage);
-			void getAllNodeinfo(NodeInfo *nodeinfo);
-			void getAllNodeHashEntry(NodeHashEntry *entryList);
-			void getCalib(ITMRGBDCalib *calib);
+			void getAllNodeinfo(NodeInfo *&nodeinfo);
+			void getAllNodeHashEntry(NodeHashEntry *&entryList);
+			void getCalib(ITMRGBDCalib *&calib);
 			void getVisibleNodeInfo(const ITMPointCloud *visiblePointClound, std::vector<int> &visibleNodeIndex);
 			void Transformation2Matrix4(const Transformation &tf, Matrix4f &mtf);
 			void Matrix42Transformation(const Matrix4f &mtf, Transformation &tf);

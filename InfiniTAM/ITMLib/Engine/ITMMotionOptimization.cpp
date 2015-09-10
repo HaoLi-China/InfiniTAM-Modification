@@ -57,7 +57,7 @@ MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, const ITMPointCloud 
 
 	// get indexes of nodes that is on surface
 	for (int i = 0; i < NODE_BUCKET_NUM*NODE_ENTRY_NUM_PER_BUCKET + NODE_EXCESS_LIST_SIZE; i++){
-		const NodeHashEntry &hashEntry = entryList[i];
+		const NodeHashEntry hashEntry = entryList[i];
 		if (hashEntry.ptr >= 0){
 			vilidNodeIndex.push_back(hashEntry.ptr);
 		}
@@ -92,9 +92,9 @@ MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, const ITMPointCloud 
 		Vector3f p = allNodeinfo[nodeindex].dg_v;
 
 		//get neighbor points within a range of radius
-		kd_eth.find_points_in_radius(p, 0.05, neighbors);
+		kd_eth.find_points_in_radius(p, 0.0025, neighbors);
+		neighborhood.push_back(neighbors);
 	}
-	neighborhood.push_back(neighbors);
 
 	kd_eth.begin();
 	free(pointSet);
@@ -220,9 +220,9 @@ void MotionsData::updatePointsNormals()
 			malys->Transformation2Matrix4(tf, mtf);
 
 			Vector4f vpt_tem(vpoints[visibles[i]].x, vpoints[visibles[i]].y, vpoints[visibles[i]].z, 1.0);
-			Vector4f vpt = vpt_tem * mtf;
-			Vector4f vn_tem(vpoints[visibles[i]].x, vpoints[visibles[i]].y, vpoints[visibles[i]].z, 1.0);
-			Vector4f vn = vpt_tem * mtf;
+			Vector4f vpt = mtf * vpt_tem;
+			Vector4f vn_tem(vnormals[visibles[i]].x, vnormals[visibles[i]].y, vnormals[visibles[i]].z, 1.0);
+			Vector4f vn = mtf * vn_tem;
 
 			vpoints[visibles[i]].x = vpt.x;
 			vpoints[visibles[i]].y = vpt.y;
@@ -311,6 +311,10 @@ static lbfgsfloatval_t motions_evaluate(
 		Vector3f mvi = mtf * points[i];
 		Vector3f mni = mtf * normals[i];
 		Vector3f dvi = dpoints[visibles[i]];
+
+		if (dvi.z == -1){
+			continue;
+		}
 
 		Vector3f delta_mvi_dvi(mvi.x - dvi.x, mvi.y - dvi.y, mvi.z - dvi.z);
 		double dot1 = mni.x * delta_mvi_dvi.x + mni.y * delta_mvi_dvi.y + mni.z * delta_mvi_dvi.z;
@@ -424,13 +428,13 @@ static lbfgsfloatval_t motions_evaluate(
 
 			// i, ry, rz, rx gradient
 			// ry
-			g[i * 6 + 3] += (lambda / squared_distance) * 2.0f * (mvij.x - mvjj.x) * (chi_ * cai * vj.x + (shi_ * sbi - chi_ * sai * sbi) * vj.y + (chi_ * sai * sbi + shi_ * cbi) * vj.z);
+			g[i * 6 + 3] += (lambda / squared_distance) * 2.0f * (mvij.x - mvjj.x) * (chi_ * cai * vj.x + (shi_ * sbi - chi_ * sai * cbi) * vj.y + (chi_ * sai * sbi + shi_ * cbi) * vj.z);
 			g[i * 6 + 3] += (lambda / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((-shi_ * cai) * vj.x + (shi_ * sai * cbi + chi_ * sbi) * vj.y + (-shi_ * sai * sbi + chi_ * cbi) * vj.z);
 
 			// rz
 			g[i * 6 + 4] += (lambda / squared_distance) * 2.0f * (mvij.x - mvjj.x) * ((chi * cai_) * vj.x + (-chi * sai_ * cbi) * vj.y + (chi * sai_ * sbi) * vj.z);
 			g[i * 6 + 4] += (lambda / squared_distance) * 2.0f * (mvij.y - mvjj.y) * (sai_* vj.x + (cai_ * cbi) * vj.y + (-cai_ * sbi) * vj.z);
-			g[i * 6 + 4] += (lambda / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((shi * sai * cbi_) * vj.y + (-shi * sai * sbi_ + chi * cbi_) * vj.z);
+			g[i * 6 + 4] += (lambda / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((-shi * cai_)* vj.x + (shi * sai_ * cbi) * vj.y + (-shi * sai_ * sbi) * vj.z);
 
 			// rx
 			g[i * 6 + 5] += (lambda / squared_distance) * 2.0f * (mvij.x - mvjj.x) * ((shi * sbi_ - chi * sai * cbi_) * vj.y + (chi * sai * sbi_ + shi * cbi_) * vj.z);
@@ -444,13 +448,13 @@ static lbfgsfloatval_t motions_evaluate(
 
 			// j, ry, rz, rx gradient
 			// ry
-			g[ind * 6 + 3] += (-lambda / squared_distance) * 2.0f * (mvij.x - mvjj.x) * (chi_ * cai * vj.x + (shi_ * sbi - chi_ * sai * sbi) * vj.y + (chi_ * sai * sbi + shi_ * cbi) * vj.z);
+			g[ind * 6 + 3] += (-lambda / squared_distance) * 2.0f * (mvij.x - mvjj.x) * (chi_ * cai * vj.x + (shi_ * sbi - chi_ * sai * cbi) * vj.y + (chi_ * sai * sbi + shi_ * cbi) * vj.z);
 			g[ind * 6 + 3] += (-lambda / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((-shi_ * cai) * vj.x + (shi_ * sai * cbi + chi_ * sbi) * vj.y + (-shi_ * sai * sbi + chi_ * cbi) * vj.z);
 
 			// rz
 			g[ind * 6 + 4] += (-lambda / squared_distance) * 2.0f * (mvij.x - mvjj.x) * ((chi * cai_) * vj.x + (-chi * sai_ * cbi) * vj.y + (chi * sai_ * sbi) * vj.z);
 			g[ind * 6 + 4] += (-lambda / squared_distance) * 2.0f * (mvij.y - mvjj.y) * (sai_* vj.x + (cai_ * cbi) * vj.y + (-cai_ * sbi) * vj.z);
-			g[ind * 6 + 4] += (-lambda / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((shi * sai * cbi_) * vj.y + (-shi * sai * sbi_ + chi * cbi_) * vj.z);
+			g[ind * 6 + 4] += (-lambda / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((-shi * cai_)* vj.x + (shi * sai_ * cbi) * vj.y + (-shi * sai_ * sbi) * vj.z);
 
 			// rx
 			g[ind * 6 + 5] += (-lambda / squared_distance) * 2.0f * (mvij.x - mvjj.x) * ((shi * sbi_ - chi * sai * cbi_) * vj.y + (chi * sai * sbi_ + shi * cbi_) * vj.z);

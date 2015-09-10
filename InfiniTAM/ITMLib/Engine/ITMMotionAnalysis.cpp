@@ -35,11 +35,14 @@ void ITMMotionAnalysis::resetHashEntry()
 
 void ITMMotionAnalysis::resetAllNodeinfo()
 {
-	memset(allNodeinfo, 0, (NODE_BUCKET_NUM*NODE_ENTRY_NUM_PER_BUCKET + NODE_EXCESS_LIST_SIZE)*sizeof(NodeHashEntry));
+	memset(allNodeinfo, 0, (NODE_BUCKET_NUM*NODE_ENTRY_NUM_PER_BUCKET + NODE_EXCESS_LIST_SIZE)*sizeof(NodeInfo));
 }
 
 //set all nodes' info
 void ITMMotionAnalysis::setAllNodeinfo(const std::vector<Vector3f> &points){
+	resetHashEntry();
+	resetAllNodeinfo();
+
 	int offsetCount = 0;
 
 	for (int i = 0; i < points.size(); i++){
@@ -49,9 +52,10 @@ void ITMMotionAnalysis::setAllNodeinfo(const std::vector<Vector3f> &points){
 		allNodeinfo[i].dg_w.x = 0;
 		allNodeinfo[i].dg_w.y = 0;
 		allNodeinfo[i].dg_w.z = 0;
-		allNodeinfo[i].dg_se3 = {0,0,0,0,0,0};
+		allNodeinfo[i].dg_se3 = {0,0,0,0,0,0 };
 
-		int res = findNodeIndex(points[i], entryList);
+		int res = hashIndex(points[i], NODE_HASH_MASK);
+		//findNodeIndex(points[i], entryList);
 		if (entryList[res].ptr == -2){
 			entryList[res].ptr = i;
 		}
@@ -122,15 +126,15 @@ double ITMMotionAnalysis::Tukey(double value){
 	return 0;
 }
 
-void ITMMotionAnalysis::getAllNodeinfo(NodeInfo *nodeinfo){
+void ITMMotionAnalysis::getAllNodeinfo(NodeInfo *&nodeinfo){
 	nodeinfo = this->allNodeinfo;
 }
 
-void ITMMotionAnalysis::getAllNodeHashEntry(NodeHashEntry *entryList){
+void ITMMotionAnalysis::getAllNodeHashEntry(NodeHashEntry *&entryList){
 	entryList = this->entryList;
 }
 
-void ITMMotionAnalysis::getCalib(ITMRGBDCalib *calib){
+void ITMMotionAnalysis::getCalib(ITMRGBDCalib *&calib){
 	calib = this->calib;
 }
 

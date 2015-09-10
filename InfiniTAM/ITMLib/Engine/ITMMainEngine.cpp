@@ -121,7 +121,7 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 	if (!mainProcessingActive) return;
 
 	// tracking
-	//trackingController->Track(trackingState, view);
+	//trackingController->Track(trackingState, view);nnn
 
 	//init motion analysis
 	std::vector<Vector3f> points;
@@ -130,12 +130,14 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 	getSurfacePoints(points, normals, sdf_s, false, true);
 	motionAnalysis->setAllNodeinfo(points);
 
-	//transform
-	std::vector<Transformation> tfs;
-	motionAnalysis->optimizeEnergyFunction(trackingState->pointCloud, view->depth);
-	motionAnalysis->getAllTransformation(points, tfs);
-	denseMapper->ResetScene(scene);
-	transformVoxels(points, sdf_s, tfs);
+	if (points.size() > 0){
+		//transform
+		std::vector<Transformation> tfs;
+		motionAnalysis->optimizeEnergyFunction(trackingState->pointCloud, view->depth);
+		motionAnalysis->getAllTransformation(points, tfs);
+		denseMapper->ResetScene(scene);
+		transformVoxels(points, sdf_s, tfs);
+	}
 
 	// fusion
 	if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live);
