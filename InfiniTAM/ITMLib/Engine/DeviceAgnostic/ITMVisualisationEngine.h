@@ -286,7 +286,6 @@ _CPU_AND_GPU_CODE_ inline void processPixelICP(DEVICEPTR(Vector4u) &outRendering
 {
 	Vector3f outNormal;
 	float angle;
-
 	computeNormalAndAngle<TVoxel, TIndex>(foundPoint, point, voxelData, voxelIndex, lightSource, outNormal, angle);
 
 	if (foundPoint)
@@ -318,7 +317,6 @@ _CPU_AND_GPU_CODE_ inline void processPixelICP(DEVICEPTR(Vector4u) *outRendering
 {
 	Vector3f outNormal;
 	float angle;
-
 	int locId = x + y * imgSize.x;
 	Vector4f point = pointsRay[locId];
 
@@ -354,7 +352,6 @@ _CPU_AND_GPU_CODE_ inline void processPixelForwardRender(DEVICEPTR(Vector4u) *ou
 {
 	Vector3f outNormal;
 	float angle;
-
 	int locId = x + y * imgSize.x;
 	Vector4f point = pointsRay[locId];
 
@@ -372,7 +369,6 @@ _CPU_AND_GPU_CODE_ inline void processPixelGrey(DEVICEPTR(Vector4u) &outRenderin
 {
 	Vector3f outNormal;
 	float angle;
-
 	computeNormalAndAngle<TVoxel, TIndex>(foundPoint, point, voxelData, voxelIndex, lightSource, outNormal, angle);
 
 	if (foundPoint) drawPixelGrey(outRendering, angle);
@@ -386,7 +382,6 @@ _CPU_AND_GPU_CODE_ inline void processPixelColour(DEVICEPTR(Vector4u) &outRender
 {
 	Vector3f outNormal;
 	float angle;
-
 	computeNormalAndAngle<TVoxel, TIndex>(foundPoint, point, voxelData, voxelIndex, lightSource, outNormal, angle);
 
 	if (foundPoint) drawPixelColour<TVoxel, TIndex>(outRendering, point, voxelData, voxelIndex);
@@ -401,7 +396,6 @@ _CPU_AND_GPU_CODE_ inline void processPixelNormal(DEVICEPTR(Vector4u) &outRender
 {
 	Vector3f outNormal;
 	float angle;
-
 	computeNormalAndAngle<TVoxel, TIndex>(foundPoint, point, voxelData, voxelIndex, lightSource, outNormal, angle);
 
 	if (foundPoint) drawPixelNormal(outRendering, outNormal);

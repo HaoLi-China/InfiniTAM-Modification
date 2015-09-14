@@ -4,14 +4,7 @@
 #include <vector>
 
 #include "../Utils/ITMMath.h"
-#include "../Objects/ITMPointCloud.h"
-#include "../Objects/ITMScene.h"
 #include "../Utils/ITMLibSettings.h"
-
-#define NODE_ENTRY_NUM_PER_BUCKET 1		// Number of entries in each Hash Bucket
-#define NODE_BUCKET_NUM 0x100000		// Number of Hash Bucket, should be 2^n and bigger than SDF_LOCAL_BLOCK_NUM, SDF_HASH_MASK = SDF_BUCKET_NUM - 1
-#define NODE_HASH_MASK 0xfffff			// Used for get hashing value of the bucket index,  SDF_HASH_MASK = SDF_BUCKET_NUM - 1
-#define NODE_EXCESS_LIST_SIZE 0x20000	// 0x20000 Size of excess list, used to handle collisions. Also max offset (unsigned short) value.
 
 using namespace ITMLib::Objects;
 
@@ -37,39 +30,30 @@ namespace ITMLib
 			int ptr;
 		};
 
-
 		class ITMMotionAnalysis
 		{
 		public:
-			ITMMotionAnalysis(const ITMLibSettings *settings, const ITMRGBDCalib *calib, bool useSparseNodes);
+			ITMMotionAnalysis(const ITMRGBDCalib *calib);
 			~ITMMotionAnalysis();
-			void optimizeEnergyFunction(const ITMPointCloud *visiblePointClound, ITMFloatImage *newDepthImage);
-			void getAllNodeinfo(NodeInfo *&nodeinfo);
-			void getAllNodeHashEntry(NodeHashEntry *&entryList);
+
+			void initialize(std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, std::vector<bool> &visiblelist);
+			void optimizeEnergyFunction(ITMFloatImage *newDepthImage);
 			void getCalib(ITMRGBDCalib *&calib);
-			void getVisibleNodeInfo(const ITMPointCloud *visiblePointClound, std::vector<int> &visibleNodeIndex);
+			void getAllPoints(std::vector<Vector3f> &cpoints);
+			void getAllNormals(std::vector<Vector3f> &cnormals);
+			void getAllTransformations(std::vector<Transformation> &ctfs);
+			void setAllTransformations(const std::vector<Transformation> &ctfs);
+			void getAllVisibleList(std::vector<bool> &visiblelist);
 			void Transformation2Matrix4(const Transformation &tf, Matrix4f &mtf);
 			void Matrix42Transformation(const Matrix4f &mtf, Transformation &tf);
-			void setAllNodeinfo(const std::vector<Vector3f> &points);
-			void getAllTransformation(const std::vector<Vector3f> &points, std::vector<Transformation> &tfs);
+			void getAllSurfacePointsTransformation(const std::vector<std::vector<Vector3f>> &cblocks_p, const std::vector<Vector3f> &cpoints, std::vector<Transformation> &tfs);
 
 		private:
-			bool useSparseNodes;
 			ITMRGBDCalib *calib;
-			NodeHashEntry *entryList;
-			NodeInfo *allNodeinfo;
-
-			int hashIndex(const Vector3f nodePos, const int hashMask);
-			int findNodeIndex(const Vector3f nodePos, const NodeHashEntry *hashTable);
-			void resetHashEntry();
-			void resetAllNodeinfo();
-
-			double Huber(double value);
-			double Tukey(double value);
-			double computeDataTerm(const ITMPointCloud *visiblePointClound, ITMFloatImage *newDepthImage, ITMPointCloud &livePointClound);
-			double computeRegularizationTerm();
-			//double computeTukeyPenalty(Vector3f &n_u, Vector3f &v_u, Vector3f &vl_uw);
-			//double computeHuberPenalty(Matrix4f &T_ic1, Vector3f &dg_v1, Matrix4f &T_ic2, Vector3f &dg_v2);
+			std::vector<Vector3f> cpoints;
+			std::vector<Vector3f> cnormals;
+			std::vector<Transformation> ctfs;
+			std::vector<bool> visiblelist;// visiblelist size = cpoints size
 		};
 	}
 }

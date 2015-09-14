@@ -76,6 +76,9 @@
     <Filter Include="Utils\KDtree\FLANN\util">
       <UniqueIdentifier>{301fbb73-7ef7-47b0-a157-14352018d25a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Utils\PointsIO">
+      <UniqueIdentifier>{51c7786f-a195-4579-ae63-0189168ea714}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\OpenNIEngine.cpp">
@@ -226,8 +229,17 @@
     <ClCompile Include="Utils\KDtree\ANN\perf.cpp">
       <Filter>Utils\KDtree\ANN</Filter>
     </ClCompile>
+    <ClCompile Include="Utils\PointsIO\PointsIO.cpp">
+      <Filter>Utils\PointsIO</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\PointsIO\rply.c">
+      <Filter>Utils\PointsIO</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\KDtree\MyKDtree.cpp">
+      <Filter>Utils\KDtree</Filter>
+    </ClCompile>
     <ClCompile Include="Utils\KDtree\ETH_Kd_Tree\kdTree.cpp">
-      <Filter>Utils\KDtree\ETH_Kd_Tree</Filter>
+      <Filter>Utils</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -669,6 +681,18 @@
     <ClInclude Include="Utils\KDtree\FLANN\util\timer.h">
       <Filter>Utils\KDtree\FLANN\util</Filter>
     </ClInclude>
+    <ClInclude Include="Utils\PointsIO\PointsIO.h">
+      <Filter>Utils\PointsIO</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\PointsIO\rply.h">
+      <Filter>Utils\PointsIO</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\CUDA_KDtree.h">
+      <Filter>Utils\KDtree</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\KDtree\MyKDtree.h">
+      <Filter>Utils\KDtree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMColorTracker_CUDA.cu">
@@ -700,6 +724,9 @@
     </CudaCompile>
     <CudaCompile Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMWeightedICPTracker_CUDA.cu">
       <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Utils\KDtree\CUDA_KDtree.cu">
+      <Filter>Utils\KDtree</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

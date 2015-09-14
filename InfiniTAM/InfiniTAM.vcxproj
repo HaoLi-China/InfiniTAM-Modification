@@ -153,8 +153,11 @@
     <ClCompile Include="Utils\KDtree\ANN\kd_util.cpp" />
     <ClCompile Include="Utils\KDtree\ANN\perf.cpp" />
     <ClCompile Include="Utils\KDtree\ETH_Kd_Tree\kdTree.cpp" />
+    <ClCompile Include="Utils\KDtree\MyKDtree.cpp" />
     <ClCompile Include="Utils\KDtree\kdtree_search.cpp" />
     <ClCompile Include="Utils\KDtree\kdtree_search_eth.cpp" />
+    <ClCompile Include="Utils\PointsIO\PointsIO.cpp" />
+    <ClCompile Include="Utils\PointsIO\rply.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\ImageFileEngine.h" />
@@ -263,6 +266,7 @@
     <ClInclude Include="Utils\KDtree\ANN\kd_util.h" />
     <ClInclude Include="Utils\KDtree\ANN\pr_queue.h" />
     <ClInclude Include="Utils\KDtree\ANN\pr_queue_k.h" />
+    <ClInclude Include="Utils\KDtree\CUDA_KDtree.h" />
     <ClInclude Include="Utils\KDtree\ETH_Kd_Tree\kdTree.h" />
     <ClInclude Include="Utils\KDtree\ETH_Kd_Tree\PriorityQueue.h" />
     <ClInclude Include="Utils\KDtree\ETH_Kd_Tree\QueryGrid.h" />
@@ -300,9 +304,12 @@
     <ClInclude Include="Utils\KDtree\FLANN\util\saving.h" />
     <ClInclude Include="Utils\KDtree\FLANN\util\serialization.h" />
     <ClInclude Include="Utils\KDtree\FLANN\util\timer.h" />
+    <ClInclude Include="Utils\KDtree\MyKDtree.h" />
     <ClInclude Include="Utils\KDtree\kdtree_search.h" />
     <ClInclude Include="Utils\KDtree\kdtree_search_eth.h" />
     <ClInclude Include="Utils\NVTimer.h" />
+    <ClInclude Include="Utils\PointsIO\PointsIO.h" />
+    <ClInclude Include="Utils\PointsIO\rply.h" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMColorTracker_CUDA.cu" />
@@ -315,6 +322,7 @@
     <CudaCompile Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMViewBuilder_CUDA.cu" />
     <CudaCompile Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMVisualisationEngine_CUDA.cu" />
     <CudaCompile Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMWeightedICPTracker_CUDA.cu" />
+    <CudaCompile Include="Utils\KDtree\CUDA_KDtree.cu" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\3rd_libLBFGS\3rd_libLBFGS.vcxproj">
