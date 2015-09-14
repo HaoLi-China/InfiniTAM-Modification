@@ -128,7 +128,7 @@ namespace ITMLib
 			void getAllOperationPoints(const std::vector<std::vector<Vector3f>> &cblocks_p, const std::vector<std::vector<short>> &cblocks_sdf, std::vector<Vector3f> &points, std::vector<short> &sdf_s);//Hao added it
 			void transformVoxels(const std::vector<Vector3f> &points, const std::vector<short> &sdf_s, const std::vector<Transformation> &tfs);//Hao added it
 			void resetAllVoxels();//Hao added it
-			void computeControlPoints(const ITMVoxel *voxels, const ITMHashEntry *hashTable, const ITMHashEntry &hashEntry, const int linearIndex, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, const bool withNormals);
+			void computeControlPoints(const ITMVoxel *voxels, const ITMHashEntry *hashTable, const ITMHashEntry &hashEntry, const std::vector<Vector3f> &relatedPoints, const std::vector<short> &sdfs, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, const bool withNormals);
 			
 			Vector2i trackedImageSize;//Hao added it
 			/** \brief Constructor

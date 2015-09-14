@@ -141,18 +141,18 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 	getAllOperationPoints(cblocks_p, cblocks_sdf, points, sdf_s);
 
 	//PointsIO::savePLYfile("cpoints.ply", cpoints, cnormals);
+	PointsIO::savePLYfile("cpoints.ply", cpoints, cnormals, Vector3u(255, 255, 255));
 
 	if (cpoints.size() > 0){
 		getVisibleControlPoints(cpoints, visiblelist);
 		motionAnalysis->initialize(cpoints, cnormals, visiblelist);
-		//motionAnalysis->optimizeEnergyFunction(view->depth);
+		motionAnalysis->optimizeEnergyFunction(view->depth);
 
 		//transform
 		std::vector<Transformation> tfs;
 		motionAnalysis->getAllSurfacePointsTransformation(cblocks_p, cpoints, tfs);
 		denseMapper->ResetScene(scene);
 		transformVoxels(points, sdf_s, tfs);
-		fusionActive = false;
 	}
 
 	// fusion
@@ -417,11 +417,7 @@ void ITMMainEngine::getControlPoints(std::vector<Vector3f> &cpoints, std::vector
 			}
 
 			if (pts0.size() > 0){
-				int a = 3;
-				int b = 3;
-				int c = 3;
-				int j = a*SDF_BLOCK_SIZE*SDF_BLOCK_SIZE + b*SDF_BLOCK_SIZE + c;
-				computeControlPoints(voxels, hashTable, hashEntry, j, cpoints, cnormals, withNormals);
+				computeControlPoints(voxels, hashTable, hashEntry, pts0, sdf0, cpoints, cnormals, withNormals); 
 
 				cblocks_p.push_back(pts0);
 				cblocks_sdf.push_back(sdf0);
@@ -524,19 +520,43 @@ void ITMMainEngine::getControlPoints(std::vector<Vector3f> &cpoints, std::vector
 }
 
 //Hao added it: compute control points
-void ITMMainEngine::computeControlPoints(const ITMVoxel *voxels, const ITMHashEntry *hashTable, const ITMHashEntry &hashEntry, const int linearIndex, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, const bool withNormals){
-	Vector3f p;
+void ITMMainEngine::computeControlPoints(const ITMVoxel *voxels, const ITMHashEntry *hashTable, const ITMHashEntry &hashEntry, const std::vector<Vector3f> &relatedPoints, const std::vector<short> &sdfs, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, const bool withNormals){
+	int a = 3;
+	int b = 3;
+	int c = 3;
+	int j = a*SDF_BLOCK_SIZE*SDF_BLOCK_SIZE + b*SDF_BLOCK_SIZE + c;
+
+	Vector3f cenPoint;
 	float voxelSize = 0.125f;
 	float blockSizeWorld = scene->sceneParams->voxelSize*SDF_BLOCK_SIZE; // = 0.005*8;
 
-	p.z = (hashEntry.pos.z + (linearIndex / (SDF_BLOCK_SIZE*SDF_BLOCK_SIZE) + 0.5f)*voxelSize)*blockSizeWorld;
-	p.y = (hashEntry.pos.y + ((linearIndex % (SDF_BLOCK_SIZE*SDF_BLOCK_SIZE)) / SDF_BLOCK_SIZE + 0.5f)*voxelSize)*blockSizeWorld;
-	p.x = (hashEntry.pos.x + ((linearIndex % (SDF_BLOCK_SIZE*SDF_BLOCK_SIZE)) % SDF_BLOCK_SIZE + 0.5f)*voxelSize)*blockSizeWorld;
+	cenPoint.z = (hashEntry.pos.z + (j / (SDF_BLOCK_SIZE*SDF_BLOCK_SIZE) + 0.5f)*voxelSize)*blockSizeWorld;
+	cenPoint.y = (hashEntry.pos.y + ((j % (SDF_BLOCK_SIZE*SDF_BLOCK_SIZE)) / SDF_BLOCK_SIZE + 0.5f)*voxelSize)*blockSizeWorld;
+	cenPoint.x = (hashEntry.pos.x + ((j % (SDF_BLOCK_SIZE*SDF_BLOCK_SIZE)) % SDF_BLOCK_SIZE + 0.5f)*voxelSize)*blockSizeWorld;
+	
+	cenPoint.x += scene->sceneParams->voxelSize / 2.0f;
+	cenPoint.y += scene->sceneParams->voxelSize / 2.0f;
+	cenPoint.z += scene->sceneParams->voxelSize / 2.0f;
+
+	Vector3f conPoint;
+	double min = 1.0f;
+	for (int i = 0; i < relatedPoints.size(); i++){
+		float x = relatedPoints[i].x;
+		float y = relatedPoints[i].y;
+		float z = relatedPoints[i].z;
+
+		double dis = (cenPoint.x - x)*(cenPoint.x - x) + (cenPoint.y - y)*(cenPoint.y - y) + (cenPoint.z - z)*(cenPoint.z - z);
+		if (min > abs((sdfs[i] / 32767.0f) * dis)){
+			min = abs((sdfs[i] / 32767.0f) * dis);
+			conPoint.x = x;
+			conPoint.y = y;
+			conPoint.z = z;
+		}
+	}
 
 	if (withNormals){
 		Vector3f n;
-
-		Vector3f pt((hashEntry.pos.x*SDF_BLOCK_SIZE + ((linearIndex % (SDF_BLOCK_SIZE*SDF_BLOCK_SIZE)) % SDF_BLOCK_SIZE + 0.5f)), (hashEntry.pos.y*SDF_BLOCK_SIZE + ((linearIndex % (SDF_BLOCK_SIZE*SDF_BLOCK_SIZE)) / SDF_BLOCK_SIZE + 0.5f)), (hashEntry.pos.z*SDF_BLOCK_SIZE + (linearIndex / (SDF_BLOCK_SIZE*SDF_BLOCK_SIZE) + 0.5f)));
+		Vector3f pt(conPoint.x / (blockSizeWorld*voxelSize), conPoint.y / (blockSizeWorld*voxelSize), conPoint.z / (blockSizeWorld*voxelSize));
 
 		Vector3f normal_host = computeSingleNormalFromSDF(voxels, hashTable, pt);
 
@@ -544,7 +564,7 @@ void ITMMainEngine::computeControlPoints(const ITMVoxel *voxels, const ITMHashEn
 		normal_host *= normScale;
 
 		Vector3f pn(normal_host[0], normal_host[1], normal_host[2]);
-		Vector3f tem(-p.x, -p.y, -p.z);
+		Vector3f tem(-conPoint.x, -conPoint.y, -conPoint.z);
 
 		double dotvalue = pn.x*tem.x + pn.y*tem.y + pn.z*tem.z;
 		if (dotvalue < 0){
@@ -558,7 +578,7 @@ void ITMMainEngine::computeControlPoints(const ITMVoxel *voxels, const ITMHashEn
 		cnormals.push_back(n);
 	}
 
-	cpoints.push_back(p);
+	cpoints.push_back(conPoint);
 }
 
 //Hao added it: get all operation points
