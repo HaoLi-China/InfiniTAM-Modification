@@ -78,6 +78,25 @@ void KdTreeSearch_ETH::add_vertex_set(Vector3f* vs, int points_num)  {
 //	}
 //}
 //
+
+void KdTreeSearch_ETH::find_closest_K_points(
+	const Vector3f& p, unsigned int k, std::vector<unsigned int>& neighbor_indices
+	)  const {
+	kdtree::Vector3D v3d(p.x, p.y, p.z);
+	get_tree(tree_)->setNOfNeighbours(k);
+	get_tree(tree_)->queryPosition(v3d);
+
+	unsigned int num = get_tree(tree_)->getNOfFoundNeighbours();
+	if (num == k && num > 1) {
+		neighbor_indices.resize(num - 1);
+		for (unsigned int i = 0; i < num - 1; ++i) {
+			neighbor_indices[i] = get_tree(tree_)->getNeighbourPositionIndex(i + 1);
+		}
+	}
+	else
+		std::cerr << "less than " << k << " points found" << std::endl;
+}
+
 void KdTreeSearch_ETH::find_closest_K_points(
 	const Vector3f& p, unsigned int k, std::vector<Vector3f>& neighbors
 	)  const {

@@ -12,9 +12,9 @@ namespace ITMLib
 {
 	namespace Engine
 	{
-		struct Transformation{
+		struct Transformation{	
 			float tx, ty, tz;
-			float ry, rz, rx;//y,z,x;heading, attitude, bank
+			float ry, rz, rx;//y,z,x;heading, attitude, bank			
 		};
 
 		struct NodeInfo{
@@ -45,6 +45,10 @@ namespace ITMLib
 			void setAllTransformations(const std::vector<Transformation> &ctfs);
 			void getAllVisibleList(std::vector<bool> &visiblelist);
 			void Transformation2Matrix4(const Transformation &tf, Matrix4f &mtf);
+			void Transformation2RotTrans(const Transformation &tf, std::vector<float>& rot, std::vector<float>& trans); // get rotation and translation
+			Vector3f TransformPoint(const std::vector<float>& rot, const std::vector<float>& trans, const Vector3f& point); // transform point
+			Vector3f TransformNormal(const std::vector<float>& rot, const Vector3f& normal); // transform normal
+			void RotTrans2Transformation(const std::vector<float>& rot, const std::vector<float>& trans, Transformation &tf); // get transformation
 			void Matrix42Transformation(const Matrix4f &mtf, Transformation &tf);
 			void getAllSurfacePointsTransformation(const std::vector<std::vector<Vector3f>> &cblocks_p, const std::vector<Vector3f> &cpoints, std::vector<Transformation> &tfs);
 
