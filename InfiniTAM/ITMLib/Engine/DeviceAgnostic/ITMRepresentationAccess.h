@@ -9,6 +9,37 @@ template<typename T> _CPU_AND_GPU_CODE_ inline int hashIndex(const THREADPTR(T) 
 	return (((uint)blockPos.x * 73856093u) ^ ((uint)blockPos.y * 19349669u) ^ ((uint)blockPos.z * 83492791u)) & (uint)SDF_HASH_MASK;
 }
 
+//Hao added it
+_CPU_AND_GPU_CODE_ inline int FindVBIndex(const Vector3s blockPos, const ITMHashEntry *hashTable)
+{
+	int offsetExcess = 0;
+	int hashIdx = hashIndex(blockPos) * 1;
+
+	//check ordered list
+	for (int inBucketIdx = 0; inBucketIdx < 1; inBucketIdx++)
+	{
+		const ITMHashEntry &hashEntry = hashTable[hashIdx + inBucketIdx];
+		offsetExcess = hashEntry.offset - 1;
+
+		if (hashEntry.ptr < 0) return -1;
+
+		if (hashEntry.pos == blockPos && hashEntry.ptr >= 0)
+			return hashIdx + inBucketIdx;
+	}
+
+	//check excess list
+	while (offsetExcess >= 0)
+	{
+		const ITMHashEntry &hashEntry = hashTable[SDF_BUCKET_NUM  * 1 + offsetExcess];
+
+		if (hashEntry.pos == blockPos && hashEntry.ptr >= 0)
+			return SDF_BUCKET_NUM  * 1 + offsetExcess;
+		offsetExcess = hashEntry.offset - 1;
+	}
+
+	return -1;
+}
+
 _CPU_AND_GPU_CODE_ inline int pointToVoxelBlockPos(const THREADPTR(Vector3i) & point, THREADPTR(Vector3i) &blockPos) {
 	blockPos.x = ((point.x < 0) ? point.x - SDF_BLOCK_SIZE + 1 : point.x) / SDF_BLOCK_SIZE;
 	blockPos.y = ((point.y < 0) ? point.y - SDF_BLOCK_SIZE + 1 : point.y) / SDF_BLOCK_SIZE;

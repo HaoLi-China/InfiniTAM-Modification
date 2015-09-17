@@ -254,6 +254,11 @@ namespace ORUtils {
 			return Vector3<float>((float)this->x * norm, (float)this->y * norm, (float)this->z * norm);
 		}
 
+		_CPU_AND_GPU_CODE_ inline float norm() const {
+			float norm_value = sqrt((float)(this->x * this->x + this->y * this->y + this->z * this->z));
+			return norm_value;
+		}
+
 		_CPU_AND_GPU_CODE_ const T *getValues() const	{ return this->v; }
 		_CPU_AND_GPU_CODE_ Vector3<T> &setValues(const T *rhs) { this->x = rhs[0]; this->y = rhs[1]; this->z = rhs[2]; return *this; }
 
