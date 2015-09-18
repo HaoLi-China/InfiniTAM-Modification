@@ -146,7 +146,8 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 	if (cpoints.size() > 0){
 		getVisibleControlPoints(cpoints, visiblelist);
 		motionAnalysis->initialize(cpoints, cnormals, visiblelist);
-		motionAnalysis->optimizeEnergyFunction(view->depth);
+		//motionAnalysis->optimizeEnergyFunction(view->depth);
+		motionAnalysis->optimizeEnergyFunctionNlopt(view->depth);
 
 		//transform
 		std::vector<Transformation> tfs;

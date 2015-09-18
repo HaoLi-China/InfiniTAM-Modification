@@ -28,7 +28,7 @@ namespace ITMLib
 			Vector3f pos;
 			int offset;
 			int ptr;
-		};
+		};		
 
 		class ITMMotionAnalysis
 		{
@@ -38,6 +38,7 @@ namespace ITMLib
 
 			void initialize(std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, std::vector<bool> &visiblelist);
 			void optimizeEnergyFunction(ITMFloatImage *newDepthImage);
+			void optimizeEnergyFunctionNlopt(ITMFloatImage *newDepthImage);
 			void getCalib(ITMRGBDCalib *&calib);
 			void getAllPoints(std::vector<Vector3f> &cpoints);
 			void getAllNormals(std::vector<Vector3f> &cnormals);
@@ -58,6 +59,37 @@ namespace ITMLib
 			std::vector<Vector3f> cnormals;
 			std::vector<Transformation> ctfs;
 			std::vector<bool> visiblelist;// visiblelist size = cpoints size
+		};
+
+		struct MotionsData
+		{
+			MotionsData(ITMMotionAnalysis *motionAnalysis, ITMFloatImage *newDepthImage);
+			void updatePointsNormals();  // using new warp transformations to compute the points and normals of canonical model
+			void computeDpoints(float *depth);  // compute corresponding points of depth image
+			void updateAllWarpInfo(double *x);
+			void updateAllWarpInfo(const std::vector<double>& x);
+
+			//float computeDataTerm(const lbfgsfloatval_t* x);
+			//float computeRegTerm(const lbfgsfloatval_t* x);
+
+			//double computeDataTerm();
+			//double computeRegTerm();
+
+			ITMMotionAnalysis* malys;
+
+			std::vector<Vector3f> points; // n, canonical model points
+			std::vector<Vector3f> normals; // n, canonical model normals
+			std::vector<Vector3f> dpoints; // depth image points
+			std::vector<Vector3f> vpoints; // visible points
+			std::vector<Vector3f> vnormals; // visible points' normals
+			std::vector<int> visibles; // n, visible nodes
+			std::vector<double> x0; // 6 * n warp transformations, n represents all nodes
+
+			std::vector<std::vector<unsigned int>> neighborhood;  // n, neighbors of each node
+			float lambda;
+
+			int depth_image_width;
+			int depth_image_height;
 		};
 	}
 }

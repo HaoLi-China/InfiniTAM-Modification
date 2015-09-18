@@ -3,40 +3,12 @@
 #include "../../Utils/KDtree/kdtree_search_eth.h"
 #include "../../Utils/PointsIO/PointsIO.h"
 #include <map>
+#include "nlopt.hpp"
 
 using namespace ITMLib::Engine;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // motions information
-struct MotionsData
-{
-	MotionsData(ITMMotionAnalysis *motionAnalysis, ITMFloatImage *newDepthImage);
-	void updatePointsNormals();  // using new warp transformations to compute the points and normals of canonical model
-	void computeDpoints(float *depth);  // compute corresponding points of depth image
-	void updateAllWarpInfo(double *x);
-
-	//float computeDataTerm(const lbfgsfloatval_t* x);
-	//float computeRegTerm(const lbfgsfloatval_t* x);
-
-	//double computeDataTerm();
-	//double computeRegTerm();
-
-	ITMMotionAnalysis* malys;
-
-	std::vector<Vector3f> points; // n, canonical model points
-	std::vector<Vector3f> normals; // n, canonical model normals
-	std::vector<Vector3f> dpoints; // depth image points
-	std::vector<Vector3f> vpoints; // visible points
-	std::vector<Vector3f> vnormals; // visible points' normals
-	std::vector<int> visibles; // n, visible nodes
-	std::vector<double> x0; // 6 * n warp transformations, n represents all nodes
-
-	std::vector<std::vector<unsigned int>> neighborhood;  // n, neighbors of each node
-	float lambda;
-
-	int depth_image_width;
-	int depth_image_height;
-};
 
 MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, ITMFloatImage *newDepthImage)
 {
@@ -130,6 +102,22 @@ void MotionsData::updateAllWarpInfo(double *x){
 		tfs[i].ry = x[6 * i + 3];
 		tfs[i].rz = x[6 * i + 4];
 		tfs[i].rx = x[6 * i + 5];
+	}
+	malys->setAllTransformations(tfs);
+}
+
+void MotionsData::updateAllWarpInfo(const std::vector<double>& x)
+{
+	std::vector<Transformation> tfs;
+	malys->getAllTransformations(tfs);
+
+	for (int i = 0; i < tfs.size(); i++){
+		tfs[i].tx = (float)x[6 * i];
+		tfs[i].ty = (float)x[6 * i + 1];
+		tfs[i].tz = (float)x[6 * i + 2];
+		tfs[i].ry = (float)x[6 * i + 3];
+		tfs[i].rz = (float)x[6 * i + 4];
+		tfs[i].rx = (float)x[6 * i + 5];
 	}
 	malys->setAllTransformations(tfs);
 }
@@ -478,4 +466,216 @@ void ITMMotionAnalysis::optimizeEnergyFunction(ITMFloatImage *newDepthImage)
 		double dot1 = mni.x * delta_mvi_dvi.x + mni.y * delta_mvi_dvi.y + mni.z * delta_mvi_dvi.z;
 		f += dot1 * dot1;
 	}
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// objective function
+double motions_function(const std::vector<double> &x, std::vector<double> &grad, void *data)
+{
+	MotionsData* d = (MotionsData*)data;
+	const std::vector<Vector3f>& points = d->points;
+	const std::vector<Vector3f>& normals = d->normals;
+	const std::vector<Vector3f>& dpoints = d->dpoints;
+	const std::vector<double>& x0 = d->x0;
+	const std::vector<int>& visibles = d->visibles;
+	const std::vector<std::vector<unsigned int>>& neighborhood = d->neighborhood;
+	ITMMotionAnalysis* malys = d->malys;
+	float lambda = d->lambda;
+	//////////////////////////////////////////////////////////////////////////
+	// initialize
+	double f = 0;
+	for (int i = 0; i < (int)x.size(); ++i) {
+		grad[i] = 0;
+	}
+
+	// data term
+	for (int i = 0; i < (int)x.size() / 6; i++) {
+		if (visibles[i] == -1)
+			continue;
+
+		// warp transformation of i
+		Transformation tf = { x[6 * i], x[6 * i + 1], x[6 * i + 2], x[6 * i + 3], x[6 * i + 4], x[6 * i + 5] };
+		std::vector<float> rot, trans;
+		malys->Transformation2RotTrans(tf, rot, trans);
+
+		// sum of data term
+		Vector3f vi = points[i];
+		Vector3f ni = normals[i];
+		Vector3f mvi = malys->TransformPoint(rot, trans, points[i]);
+		Vector3f mni = malys->TransformNormal(rot, normals[i]);
+		Vector3f dvi = dpoints[visibles[i]];
+
+		if (dvi.z == -1){
+			continue;
+		}
+
+		Vector3f delta_mvi_dvi(mvi.x - dvi.x, mvi.y - dvi.y, mvi.z - dvi.z);
+		double dot1 = mni.x * delta_mvi_dvi.x + mni.y * delta_mvi_dvi.y + mni.z * delta_mvi_dvi.z;
+		f += dot1 * dot1;
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// gradient 
+		// 2 * (ni.(vi - vi'))
+		double dot2 = dot1;
+		dot2 *= 2.0f;
+
+		// tx, ty, tz gradient
+		grad[i * 6] += dot2 * mni.x;
+		grad[i * 6 + 1] += dot2 * mni.y;
+		grad[i * 6 + 2] += dot2 * mni.z;
+
+		float chi = std::cos(x[i * 6 + 3]);
+		float shi = std::sin(x[i * 6 + 3]);
+		float cai = std::cos(x[i * 6 + 4]);
+		float sai = std::sin(x[i * 6 + 4]);
+		float cbi = std::cos(x[i * 6 + 5]);
+		float sbi = std::sin(x[i * 6 + 5]);
+
+		float chi_ = -std::sin(x[i * 6 + 3]);
+		float shi_ = std::cos(x[i * 6 + 3]);
+		float cai_ = -std::sin(x[i * 6 + 4]);
+		float sai_ = std::cos(x[i * 6 + 4]);
+		float cbi_ = -std::sin(x[i * 6 + 5]);
+		float sbi_ = std::cos(x[i * 6 + 5]);
+
+		// ry gradient
+		// (mtf * ni) . (mtf * vi) - (mtf * ni) . dvi gradient
+		grad[i * 6 + 3] += (mvi.x - dvi.x) * (chi_ * cai * ni.x + (shi_ * sbi - chi_ * sai * cbi) * ni.y + (chi_ * sai * sbi + shi_ * cbi) * ni.z);
+		grad[i * 6 + 3] += mni.x * (chi_ * cai * vi.x + (shi_ * sbi - chi_ * sai * cbi) * vi.y + (chi_ * sai * sbi + shi_ * cbi) * vi.z);
+		grad[i * 6 + 3] += (mvi.z - dvi.z) * (-shi_ * cai * ni.x + (shi_ * sai * cbi + chi_ * sbi) * ni.y + (-shi_ * sai * sbi + chi_ * cbi) * ni.z);
+		grad[i * 6 + 3] += mni.z * (-shi_ * cai * vi.x + (shi_ * sai * cbi + chi_ * sbi) * vi.y + (-shi_ * sai * sbi + chi_ * cbi) * vi.z);
+		// 2 * (ni.(vi - vi')) * ((mtf * ni) . (mtf * vi) - (mtf * ni) . dvi)'ry
+		grad[i * 6 + 3] *= dot2;
+
+		// rz gradient
+		// (mtf * ni) . (mtf * vi) - (mtf * ni) . dvi gradient
+		grad[i * 6 + 4] += (mvi.x - dvi.x) * (chi * cai_ * ni.x + (-chi * sai_ * cbi) * ni.y + (chi * sai_ * sbi) * ni.z);
+		grad[i * 6 + 4] += mni.x * (chi * cai_ * vi.x + (-chi * sai_ * cbi) * vi.y + (chi * sai_ * sbi) * vi.z);
+		grad[i * 6 + 4] += (mvi.y - dvi.y) * (sai_ * ni.x + cai_ * cbi * ni.y + (-cai_ * sbi) * ni.z);
+		grad[i * 6 + 4] += mni.y * (sai_ * vi.x + cai_ * cbi * vi.y + (-cai_ * sbi) * vi.z);
+		grad[i * 6 + 4] += (mvi.z - dvi.z) * ((-shi * cai_)* ni.x + shi * sai_ * cbi * ni.y + (-shi * sai_ * sbi) * ni.z);
+		grad[i * 6 + 4] += mni.z * ((-shi * cai_)* vi.x + shi * sai_ * cbi * vi.y + (-shi * sai_ * sbi) * vi.z);
+		// 2 * (ni.(vi - vi')) * ((mtf * ni) . (mtf * vi) - (mtf * ni) . dvi)'rz
+		grad[i * 6 + 4] *= dot2;
+
+		// rx gradient
+		// (mtf * ni) . (mtf * vi) - (mtf * ni) . dvi gradient
+		grad[i * 6 + 5] += (mvi.x - dvi.x) * ((shi * sbi_ - chi * sai * cbi_)* ni.y + (chi * sai * sbi_ + shi * cbi_) * ni.z);
+		grad[i * 6 + 5] += mni.x * ((shi * sbi_ - chi * sai * cbi_)* vi.y + (chi * sai * sbi_ + shi * cbi_) * vi.z);
+		grad[i * 6 + 5] += (mvi.y - dvi.y) * (cai * cbi_ * ni.y + (-cai * sbi_) * ni.z);
+		grad[i * 6 + 5] += mni.y * (cai * cbi_ * vi.y + (-cai * sbi_) * vi.z);
+		grad[i * 6 + 5] += (mvi.z - dvi.z) * ((shi * sai * cbi_ + chi * cbi_) * ni.y + (-shi * sai * sbi_ + chi * cbi_) * ni.z);
+		grad[i * 6 + 5] += mni.z * ((shi * sai * cbi_ + chi * cbi_) * vi.y + (-shi * sai * sbi_ + chi * cbi_) * vi.z);
+		// 2 * (ni.(vi - vi')) * ((mtf * ni) . (mtf * vi) - (mtf * ni) . dvi)'rx
+		grad[i * 6 + 5] *= dot2;
+	}
+
+	// reg term
+	for (int i = 0; i < (int)x.size() / 6; i++){
+		const std::vector<unsigned int>& neighbors = neighborhood[i];
+		Transformation tf_ic = { x[6 * i], x[6 * i + 1], x[6 * i + 2], x[6 * i + 3], x[6 * i + 4], x[6 * i + 5] };
+		std::vector<float> iRot, iTrans;
+		malys->Transformation2RotTrans(tf_ic, iRot, iTrans);
+
+		//compute each sub term
+		for (int j = 0; j < neighbors.size(); j++){
+			unsigned int ind = neighbors[j];
+			Transformation tf_jc = { x[6 * ind], x[6 * ind + 1], x[6 * ind + 2], x[6 * ind + 3], x[6 * ind + 4], x[6 * ind + 5] };
+			std::vector<float> jRot, jTrans;
+			malys->Transformation2RotTrans(tf_jc, jRot, jTrans);
+
+			Vector3f vi = points[i];
+			Vector3f vj = points[ind];
+			Vector3f mvij = malys->TransformPoint(iRot, iTrans, vj);
+			Vector3f mvjj = malys->TransformPoint(jRot, jTrans, vj);
+
+			// sum of reg term
+			Vector3f vij = vi - vj;
+			float squared_distance = vij.x * vij.x + vij.y * vij.y + vij.z * vij.z;
+			Vector3f delta = mvij - mvjj;
+			double result_tem = (delta.x * delta.x + delta.y * delta.y + delta.z * delta.z) / squared_distance;
+			f += lambda * result_tem;
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			// gradient 
+			float chi = std::cos(x[i * 6 + 3]);
+			float shi = std::sin(x[i * 6 + 3]);
+			float cai = std::cos(x[i * 6 + 4]);
+			float sai = std::sin(x[i * 6 + 4]);
+			float cbi = std::cos(x[i * 6 + 5]);
+			float sbi = std::sin(x[i * 6 + 5]);
+
+			float chi_ = -std::sin(x[i * 6 + 3]);
+			float shi_ = std::cos(x[i * 6 + 3]);
+			float cai_ = -std::sin(x[i * 6 + 4]);
+			float sai_ = std::cos(x[i * 6 + 4]);
+			float cbi_ = -std::sin(x[i * 6 + 5]);
+			float sbi_ = std::cos(x[i * 6 + 5]);
+
+			// i, tx, ty, tz
+			grad[i * 6] += lambda * 2.0f * (mvij.x - mvjj.x) * 1.0f / squared_distance;
+			grad[i * 6 + 1] += lambda * 2.0f * (mvij.y - mvjj.y) * 1.0f / squared_distance;
+			grad[i * 6 + 2] += lambda * 2.0f * (mvij.z - mvjj.z) * 1.0f / squared_distance;
+
+			// i, ry, rz, rx gradient
+			// ry
+			grad[i * 6 + 3] += (lambda / squared_distance) * 2.0f * (mvij.x - mvjj.x) * (chi_ * cai * vj.x + (shi_ * sbi - chi_ * sai * cbi) * vj.y + (chi_ * sai * sbi + shi_ * cbi) * vj.z);
+			grad[i * 6 + 3] += (lambda / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((-shi_ * cai) * vj.x + (shi_ * sai * cbi + chi_ * sbi) * vj.y + (-shi_ * sai * sbi + chi_ * cbi) * vj.z);
+
+			// rz
+			grad[i * 6 + 4] += (lambda / squared_distance) * 2.0f * (mvij.x - mvjj.x) * ((chi * cai_) * vj.x + (-chi * sai_ * cbi) * vj.y + (chi * sai_ * sbi) * vj.z);
+			grad[i * 6 + 4] += (lambda / squared_distance) * 2.0f * (mvij.y - mvjj.y) * (sai_* vj.x + (cai_ * cbi) * vj.y + (-cai_ * sbi) * vj.z);
+			grad[i * 6 + 4] += (lambda / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((-shi * cai_)* vj.x + (shi * sai_ * cbi) * vj.y + (-shi * sai_ * sbi) * vj.z);
+
+			// rx
+			grad[i * 6 + 5] += (lambda / squared_distance) * 2.0f * (mvij.x - mvjj.x) * ((shi * sbi_ - chi * sai * cbi_) * vj.y + (chi * sai * sbi_ + shi * cbi_) * vj.z);
+			grad[i * 6 + 5] += (lambda / squared_distance) * 2.0f * (mvij.y - mvjj.y) * ((cai * cbi_)* vj.y + (-cai * sbi_) * vj.z);
+			grad[i * 6 + 5] += (lambda / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((shi * sai * cbi_ + chi * sbi_) * vj.y + (-shi * sai * sbi_ + chi * cbi_) * vj.z);
+
+			// j, tx, ty, tz
+			grad[ind * 6] += lambda * 2.0f * (mvij.x - mvjj.x) * (-1.0f) / squared_distance;
+			grad[ind * 6 + 1] += lambda * 2.0f * (mvij.y - mvjj.y) * (-1.0f) / squared_distance;
+			grad[ind * 6 + 2] += lambda * 2.0f * (mvij.z - mvjj.z) * (-1.0f) / squared_distance;
+
+			// j, ry, rz, rx gradient
+			// ry
+			grad[ind * 6 + 3] += (-lambda / squared_distance) * 2.0f * (mvij.x - mvjj.x) * (chi_ * cai * vj.x + (shi_ * sbi - chi_ * sai * cbi) * vj.y + (chi_ * sai * sbi + shi_ * cbi) * vj.z);
+			grad[ind * 6 + 3] += (-lambda / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((-shi_ * cai) * vj.x + (shi_ * sai * cbi + chi_ * sbi) * vj.y + (-shi_ * sai * sbi + chi_ * cbi) * vj.z);
+
+			// rz
+			grad[ind * 6 + 4] += (-lambda / squared_distance) * 2.0f * (mvij.x - mvjj.x) * ((chi * cai_) * vj.x + (-chi * sai_ * cbi) * vj.y + (chi * sai_ * sbi) * vj.z);
+			grad[ind * 6 + 4] += (-lambda / squared_distance) * 2.0f * (mvij.y - mvjj.y) * (sai_* vj.x + (cai_ * cbi) * vj.y + (-cai_ * sbi) * vj.z);
+			grad[ind * 6 + 4] += (-lambda / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((-shi * cai_)* vj.x + (shi * sai_ * cbi) * vj.y + (-shi * sai_ * sbi) * vj.z);
+
+			// rx
+			grad[ind * 6 + 5] += (-lambda / squared_distance) * 2.0f * (mvij.x - mvjj.x) * ((shi * sbi_ - chi * sai * cbi_) * vj.y + (chi * sai * sbi_ + shi * cbi_) * vj.z);
+			grad[ind * 6 + 5] += (-lambda / squared_distance) * 2.0f * (mvij.y - mvjj.y) * ((cai * cbi_)* vj.y + (-cai * sbi_) * vj.z);
+			grad[ind * 6 + 5] += (-lambda / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((shi * sai * cbi_ + chi * sbi_) * vj.y + (-shi * sai * sbi_ + chi * cbi_) * vj.z);
+		}
+	}
+
+	return f;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// main optimization function
+void ITMMotionAnalysis::optimizeEnergyFunctionNlopt(ITMFloatImage *newDepthImage)
+{
+	MotionsData data(this, newDepthImage);
+	data.lambda = 0.0f;
+
+	int n = data.x0.size();
+	std::vector<double> x(n);
+	for (int i = 0; i < n; ++i) {
+		x[i] = data.x0[i];
+	}
+
+	nlopt::opt opt(nlopt::LD_MMA, n);
+	opt.set_min_objective(motions_function, &data);
+	opt.set_xtol_rel(1e-5);
+
+	double minf;
+	nlopt::result result = opt.optimize(x, minf);
+
+	data.updateAllWarpInfo(x);
 }
