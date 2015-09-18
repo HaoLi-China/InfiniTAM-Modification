@@ -76,6 +76,10 @@ namespace ITMLib
 
 			ITMMotionAnalysis *motionAnalysis;// Hao added it
 
+			void saveHashTable(const std::string &filename);// Hao added it,just for debug
+			void saveVisibleEntryIDs(const std::string &filename);// Hao added it,just for debug
+			void saveEntriesVisibleType(const std::string &filename);// Hao added it,just for debug
+			
 		public:
 			enum GetImageType
 			{
@@ -123,13 +127,16 @@ namespace ITMLib
 			void turnOffMainProcessing();
 
 			void getSurfacePoints(std::vector<Vector3f> &points, std::vector<Vector3f> &normals, std::vector<short> &sdf_s, const bool withNormals = false, const bool withSDFs = false);//Hao added it
-			void getControlPoints(std::vector<Vector3f> &cpoints, std::vector<std::vector<Vector3f>> &cblocks_p, std::vector<std::vector<short>> &cblocks_sdf, std::vector<Vector3f> &cnormals, const bool withNormals = false);//Hao added it
+			void getControlPoints(std::vector<Vector3f> &cpoints, std::vector<std::vector<Vector3f>> &cblocks_p, std::vector<std::vector<short>> &cblocks_sdf, std::vector<std::vector<uchar>> &cblocks_w, std::vector<Vector3f> &cnormals, const bool withNormals = false);//Hao added it
 			void getVisibleControlPoints(const std::vector<Vector3f> &cpoints, std::vector<bool> &visiblelist);//Hao added it
-			void getAllOperationPoints(const std::vector<std::vector<Vector3f>> &cblocks_p, const std::vector<std::vector<short>> &cblocks_sdf, std::vector<Vector3f> &points, std::vector<short> &sdf_s);//Hao added it
-			void transformVoxels(const std::vector<Vector3f> &points, const std::vector<short> &sdf_s, const std::vector<Transformation> &tfs);//Hao added it
+			void getAllOperationPoints(const std::vector<std::vector<Vector3f>> &cblocks_p, const std::vector<std::vector<short>> &cblocks_sdf, const std::vector<std::vector<uchar>> &cblocks_w, std::vector<Vector3f> &points, std::vector<short> &sdf_s, std::vector<uchar> &w_s);//Hao added it
+			void transformVoxels(const std::vector<Vector3f> &points, const std::vector<short> &sdf_s, const std::vector<uchar> &w_s, const std::vector<Transformation> &tfs);//Hao added it
 			void resetAllVoxels();//Hao added it
 			void computeControlPoints(const ITMVoxel *voxels, const ITMHashEntry *hashTable, const ITMHashEntry &hashEntry, const std::vector<Vector3f> &relatedPoints, const std::vector<short> &sdfs, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, const bool withNormals);
 			
+			static void saveSDFs(const ITMScene<ITMVoxel, ITMVoxelIndex> *scene, const ITMRenderState *renderState, const std::string &filename);// Hao added it,just for debug
+
+
 			Vector2i trackedImageSize;//Hao added it
 			/** \brief Constructor
 			    Ommitting a separate image size for the depth images
