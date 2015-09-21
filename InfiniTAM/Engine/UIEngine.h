@@ -93,7 +93,9 @@ namespace InfiniTAM
 			void ProcessFrame();
 			
 			void GetScreenshot(ITMUChar4Image *dest) const;
+			void GetFusionScreenshot(ITMUChar4Image *dest) const;
 			void SaveScreenshot(const char *filename) const;
+			void SaveFusionScreenshot(const char *filename) const;
 			void SaveSceneToMesh(const char *filename) const;
 		};
 	}

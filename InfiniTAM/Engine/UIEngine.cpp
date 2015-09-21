@@ -1,6 +1,8 @@
 // Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #include "UIEngine.h"
+#include <iostream>
+#include <strstream>
 
 #include <string.h>
 #ifdef __APPLE__
@@ -429,6 +431,19 @@ void UIEngine::SaveScreenshot(const char *filename) const
 	SaveImageToFile(&screenshot, filename, true);
 }
 
+void UIEngine::SaveFusionScreenshot(const char *filename) const
+{
+	UIEngine *uiEngine = UIEngine::Instance();
+	Vector4f *winReg = uiEngine->winReg;
+	Vector2i window;
+	window.x = (int)((winReg[0][2] - winReg[0][0]) * winSize.x);
+	window.y = (int)((winReg[0][3] - winReg[0][1]) * winSize.y);
+
+	ITMUChar4Image screenshot(window, true, false);
+	GetFusionScreenshot(&screenshot);
+	SaveImageToFile(&screenshot, filename, true);
+}
+
 void UIEngine::SaveSceneToMesh(const char *filename) const
 {
 	mainEngine->SaveSceneToMesh(filename);
@@ -438,6 +453,13 @@ void UIEngine::GetScreenshot(ITMUChar4Image *dest) const
 {
 	glReadPixels(0, 0, dest->noDims.x, dest->noDims.y, GL_RGBA, GL_UNSIGNED_BYTE, dest->GetData(MEMORYDEVICE_CPU));
 }
+
+void UIEngine::GetFusionScreenshot(ITMUChar4Image *dest) const
+{
+	int textHeight = 30;
+	glReadPixels(0, textHeight, dest->noDims.x, dest->noDims.y + textHeight, GL_RGBA, GL_UNSIGNED_BYTE, dest->GetData(MEMORYDEVICE_CPU));
+}
+
 
 void UIEngine::ProcessFrame()
 {
@@ -476,6 +498,18 @@ void UIEngine::ProcessFrame()
 
 	//processedTime = sdkGetTimerValue(&timer_instant);
 	processedTime = sdkGetAverageTimerValue(&timer_average);
+
+	//std::strstream ss1;
+	//std::string snapshotname1;
+	//ss1 << "snapshots/full_" << currentFrameNo << ".pnm";
+	//ss1 >> snapshotname1;
+	//SaveScreenshot(snapshotname1.c_str());
+
+	std::strstream ss2;
+	std::string snapshotname2;
+	ss2 << "snapshots/fusion_" << currentFrameNo << ".pnm";
+	ss2 >> snapshotname2;
+	SaveFusionScreenshot(snapshotname2.c_str());
 
 	currentFrameNo++;
 }
