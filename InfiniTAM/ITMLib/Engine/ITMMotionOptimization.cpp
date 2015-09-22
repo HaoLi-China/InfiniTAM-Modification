@@ -678,6 +678,5 @@ void ITMMotionAnalysis::optimizeEnergyFunctionNlopt(ITMFloatImage *newDepthImage
 	nlopt::result result = opt.optimize(x, minf);
 
 	std::cout << "minf = " << minf << std::endl;
-
 	data.updateAllWarpInfo(x);
 }
