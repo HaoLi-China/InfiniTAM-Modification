@@ -33,8 +33,10 @@ namespace ITMLib
 		class ITMMotionAnalysis
 		{
 		public:
-			ITMMotionAnalysis(const ITMRGBDCalib *calib);
+			ITMMotionAnalysis(const ITMRGBDCalib *calib, bool useControlPoints);
 			~ITMMotionAnalysis();
+
+			const float INFLUENCE_RADIUS = sqrt(0.04*0.04*3);
 
 			void initialize(std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, std::vector<bool> &visiblelist);
 			void optimizeEnergyFunction(ITMFloatImage *newDepthImage);
@@ -59,6 +61,10 @@ namespace ITMLib
 			std::vector<Vector3f> cnormals;
 			std::vector<Transformation> ctfs;
 			std::vector<bool> visiblelist;// visiblelist size = cpoints size
+
+			bool useControlPoints;
+
+			void getNeighboorsOfEachNode(const std::vector<Vector3f> &cpoints, const float radius, std::vector<std::vector<unsigned int>> &neighbor);
 		};
 
 		struct MotionsData

@@ -162,17 +162,10 @@ void UIEngine::glutKeyUpFunction(unsigned char key, int x, int y)
 		uiEngine->mainLoopAction = UIEngine::PROCESS_VIDEO;
 		break;
 	case 's':
-		if (uiEngine->isRecording)
-		{
-			printf("stopped recoding disk ...\n");
-			uiEngine->isRecording = false;
-		}
-		else
-		{
-			printf("started recoding disk ...\n");
-			uiEngine->currentFrameNo = 0;
-			uiEngine->isRecording = true;
-		}
+		printf("saving surface points to disk ...");
+		uiEngine->mainLoopAction = UIEngine::PROCESS_PAUSED;
+		uiEngine->mainEngine->saveSurfacePoints("surfacePoints.ply");
+		printf(" done\n");
 		break;
 	case 'e':
 	case 27: // esc key
@@ -367,7 +360,7 @@ void UIEngine::Initialise(int & argc, char** argv, ImageSourceEngine *imageSourc
 	winReg[1] = Vector4f(0.665f, h2, 1.0f, 1.0f);   // Side sub window 0
 	winReg[2] = Vector4f(0.665f, h1, 1.0f, h2);     // Side sub window 2
 
-	this->isRecording = false;
+	this->isRecording = true;
 	this->currentFrameNo = 0;
 
 	glutInit(&argc, argv);
@@ -471,19 +464,6 @@ void UIEngine::ProcessFrame()
 		else imuSource->getMeasurement(inputIMUMeasurement);
 	}
 
-	if (isRecording)
-	{
-		char str[250];
-
-		sprintf(str, "%s/%04d.pgm", outFolder, currentFrameNo);
-		SaveImageToFile(inputRawDepthImage, str);
-
-		if (inputRGBImage->noDims != Vector2i(0,0)) {
-			sprintf(str, "%s/%04d.ppm", outFolder, currentFrameNo);
-			SaveImageToFile(inputRGBImage, str);
-		}
-	}
-
 	sdkResetTimer(&timer_instant);
 	sdkStartTimer(&timer_instant); sdkStartTimer(&timer_average);
 
@@ -499,18 +479,20 @@ void UIEngine::ProcessFrame()
 	//processedTime = sdkGetTimerValue(&timer_instant);
 	processedTime = sdkGetAverageTimerValue(&timer_average);
 
-	//std::strstream ss1;
-	//std::string snapshotname1;
-	//ss1 << "snapshots/full_" << currentFrameNo << ".pnm";
-	//ss1 >> snapshotname1;
-	//SaveScreenshot(snapshotname1.c_str());
+	if (isRecording){
+		std::strstream ss1;
+		std::string snapshotname1;
+		ss1 << "snapshots/full_" << currentFrameNo << ".ppm";
+		ss1 >> snapshotname1;
+		SaveScreenshot(snapshotname1.c_str());
 
-	std::strstream ss2;
-	std::string snapshotname2;
-	ss2 << "snapshots/fusion_" << currentFrameNo << ".pnm";
-	ss2 >> snapshotname2;
-	SaveFusionScreenshot(snapshotname2.c_str());
-
+		std::strstream ss2;
+		std::string snapshotname2;
+		ss2 << "snapshots/fusion_" << currentFrameNo << ".ppm";
+		ss2 >> snapshotname2;
+		SaveFusionScreenshot(snapshotname2.c_str());
+	}
+	
 	currentFrameNo++;
 }
 

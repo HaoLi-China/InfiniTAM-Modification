@@ -69,6 +69,12 @@ namespace ITMLib
 			/// Further, scene specific parameters such as voxel size
 			ITMLib::Objects::ITMSceneParams sceneParams;
 
+			/// flag about using static rigid fusion or mechanical fusion
+			bool useMechanicalFusion;
+
+			/// Enables using control points
+			bool useControlPoints;
+
 			ITMLibSettings(void);
 			~ITMLibSettings(void);
 

@@ -74,7 +74,7 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 	fusionActive = true;
 	mainProcessingActive = true;
 
-	motionAnalysis = new ITMMotionAnalysis(calib);
+	motionAnalysis = new ITMMotionAnalysis(calib, settings->useControlPoints);
 }
 
 ITMMainEngine::~ITMMainEngine()
@@ -125,58 +125,61 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 
 	if (!mainProcessingActive) return;
 
-	// tracking
-	//trackingController->Track(trackingState, view);
+	if (settings->useMechanicalFusion){
+		//init motion analysis
+		std::vector<Vector3f> points;
+		std::vector<Vector3f> normals;
+		std::vector<short> sdf_s;
+		std::vector<uchar> w_s;
+		std::vector<Vector3f> cpoints;
+		std::vector<Vector3f> cnormals;
+		std::vector<bool> visiblelist;// visiblelist size = cpoints size
+		std::vector<std::vector<Vector3f>> cblocks_p;
+		std::vector<std::vector<short>> cblocks_sdf;
+		std::vector<std::vector<uchar>> cblocks_w;
+		
+		if (settings->useControlPoints){
+			getControlPoints(cpoints, cblocks_p, cblocks_sdf, cblocks_w, cnormals, true);
+			getAllOperationPoints(cblocks_p, cblocks_sdf, cblocks_w, points, sdf_s, w_s);
+		}
+		else{
+			getAllOperationPoints(points, normals, sdf_s, w_s, true);
+		}
 
-	//init motion analysis
-	std::vector<Vector3f> points;
-	std::vector<Vector3f> normals;
-	std::vector<short> sdf_s;
-	std::vector<uchar> w_s;
-	std::vector<Vector3f> cpoints;
-	std::vector<Vector3f> cnormals;
-	std::vector<bool> visiblelist;// visiblelist size = cpoints size
-	std::vector<std::vector<Vector3f>> cblocks_p;
-	std::vector<std::vector<short>> cblocks_sdf;
-	std::vector<std::vector<uchar>> cblocks_w;
-	//getSurfacePoints(points, normals, sdf_s, false, true);
-	getControlPoints(cpoints, cblocks_p, cblocks_sdf, cblocks_w, cnormals, true);
-	getAllOperationPoints(cblocks_p, cblocks_sdf, cblocks_w, points, sdf_s, w_s);
+		//PointsIO::savePLYfile("cpoints.ply", cpoints, cnormals);
+		//PointsIO::savePLYfile("cpoints.ply", cpoints, cnormals, Vector3u(255, 255, 255));
 
-	//PointsIO::savePLYfile("cpoints.ply", cpoints, cnormals);
-	//PointsIO::savePLYfile("cpoints.ply", cpoints, cnormals, Vector3u(255, 255, 255));
+		if (settings->useControlPoints && cpoints.size() > 0){
+			getVisibleControlPoints(cpoints, visiblelist);
+			motionAnalysis->initialize(cpoints, cnormals, visiblelist);
+			////motionAnalysis->optimizeEnergyFunction(view->depth);
+			motionAnalysis->optimizeEnergyFunctionNlopt(view->depth);
 
-	if (cpoints.size() > 0){
-		getVisibleControlPoints(cpoints, visiblelist);
-		motionAnalysis->initialize(cpoints, cnormals, visiblelist);
-		//motionAnalysis->optimizeEnergyFunction(view->depth);
-		motionAnalysis->optimizeEnergyFunctionNlopt(view->depth);
+			//transform
+			std::vector<Transformation> tfs;
+			motionAnalysis->getAllSurfacePointsTransformation(cblocks_p, cpoints, tfs);
+			denseMapper->ResetScene(scene);
+			transformVoxels(points, sdf_s, w_s, tfs);
+		}
+		else if (!(settings->useControlPoints) && points.size() > 0){
+			getVisiblePoints(points, visiblelist);
+			motionAnalysis->initialize(points, normals, visiblelist);
+			motionAnalysis->optimizeEnergyFunctionNlopt(view->depth);
 
-		//saveHashTable("hashtable1.txt");
-		//saveEntriesVisibleType("visible1.txt");
-		//saveVisibleEntryIDs("entryids1.txt");
-		//saveSDFs("sdf11.txt");
-		//transform
-		std::vector<Transformation> tfs;
-		motionAnalysis->getAllSurfacePointsTransformation(cblocks_p, cpoints, tfs);
-		denseMapper->ResetScene(scene);
-		transformVoxels(points, sdf_s, w_s, tfs);
-		//saveSDFs("sdf22.txt");
-		//saveHashTable("hashtable2.txt");
-		//saveEntriesVisibleType("visible2.txt");
-		//saveVisibleEntryIDs("entryids2.txt");
-
-		//fusionActive = false;
+			//transform
+			std::vector<Transformation> tfs;
+			motionAnalysis->getAllSurfacePointsTransformation(cblocks_p, points, tfs);
+			denseMapper->ResetScene(scene);
+			transformVoxels(points, sdf_s, w_s, tfs);
+		}
+	}
+	else{
+		// tracking
+		trackingController->Track(trackingState, view);
 	}
 
 	// fusion
 	if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live);
-	//saveSDFs(scene, renderState_live, "sdf24.txt");
-	//saveHashTable("hashtable4.txt");
-	//saveEntriesVisibleType("visible4.txt");
-
-	//saveSDFs("sdf2.txt");
-	//saveHashTable("hashtablef1.txt");
 	
 	// raycast to renderState_live for tracking and free visualisation
 	trackingController->Prepare(trackingState, view, renderState_live);
@@ -253,7 +256,7 @@ void ITMMainEngine::turnOnMainProcessing() { mainProcessingActive = true; }
 void ITMMainEngine::turnOffMainProcessing() { mainProcessingActive = false; }
 
 //Hao added it: get all surface points
-void ITMMainEngine::getSurfacePoints(std::vector<Vector3f> &points, std::vector<Vector3f> &normals, std::vector<short> &sdf_s, const bool withNormals, const bool withSDFs){
+void ITMMainEngine::getAllOperationPoints(std::vector<Vector3f> &points, std::vector<Vector3f> &normals, std::vector<short> &sdf_s, std::vector<uchar> &w_s, const bool withNormals){
 	points.clear();
 	normals.clear();
 
@@ -284,12 +287,11 @@ void ITMMainEngine::getSurfacePoints(std::vector<Vector3f> &points, std::vector<
 				ITMVoxel res = voxels[(hashEntry.ptr * SDF_BLOCK_SIZE3) + j];
 
 				float value = ITMVoxel::SDF_valueToFloat(res.sdf);
-				if (value<10 * mu&&value>-10 * mu){ //mu=0.02
+				if (value<50 * mu&&value>-50 * mu){ //mu=0.02
 					//cout<<"value:"<<value<<endl;
-					if (withSDFs){
-						sdf_s.push_back(res.sdf);
-					}
-
+				    sdf_s.push_back(res.sdf);
+					w_s.push_back(res.w_depth);
+					
 					Vector3f p;
 					float voxelSize = 0.125f;
 					float blockSizeWorld = scene->sceneParams->voxelSize*SDF_BLOCK_SIZE; // = 0.005*8;
@@ -799,6 +801,74 @@ void ITMMainEngine::getVisibleControlPoints(const std::vector<Vector3f> &cpoints
 	vpointCloud = NULL;
 }
 
+//Hao added it: Get Visible Points
+void ITMMainEngine::getVisiblePoints(const std::vector<Vector3f> &points, std::vector<bool> &visiblelist){
+	visiblelist.clear();
+
+	for (int i = 0; i < points.size(); i++){
+		visiblelist.push_back(false);
+	}
+
+	ITMPointCloud *vpointCloud = new ITMPointCloud(trackedImageSize, MEMORYDEVICE_CPU);
+	Vector4f *vpoint = vpointCloud->locations->GetData(MEMORYDEVICE_CPU);
+	
+	vpointCloud->noTotalPoints = trackedImageSize.x * trackedImageSize.y;
+
+	bool flag = false;
+#ifndef COMPILE_WITHOUT_CUDA
+	flag = true;
+#endif
+	if (flag){
+		ITMSafeCall(cudaMemcpy(vpoint, trackingState->pointCloud->locations->GetData(MEMORYDEVICE_CUDA), trackedImageSize.x * trackedImageSize.y * sizeof(Vector4f), cudaMemcpyDeviceToHost));
+	}
+	else{
+		memcpy(vpoint, trackingState->pointCloud->locations->GetData(MEMORYDEVICE_CUDA), trackedImageSize.x * trackedImageSize.y * sizeof(Vector4f));
+	}
+
+	std::vector<Vector3f> vpts;
+	for (int i = 0; i < trackedImageSize.x*trackedImageSize.y; i++){
+		if (vpoint[i].w > 0){
+			Vector3f pt(vpoint[i].x, vpoint[i].y, vpoint[i].z);
+			vpts.push_back(pt);
+		}
+	}
+
+	Vector3f *pointSet = (Vector3f*)malloc((vpts.size())*sizeof(Vector3f));
+	for (int i = 0; i < vpts.size(); i++){
+		pointSet[i].x = vpts[i].x;
+		pointSet[i].y = vpts[i].y;
+		pointSet[i].z = vpts[i].z;
+	}
+
+	KdTreeSearch_ETH kd_eth;
+	kd_eth.add_vertex_set(pointSet, vpts.size());
+	kd_eth.end();
+
+	float voxelSize = 0.005f;
+	std::vector<unsigned int> neighbors;
+	for (int i = 0; i < points.size(); i++){
+		Vector3f p = points[i];
+		std::vector<Vector3f> neighbors;
+		std::vector<double> squared_distances;
+		//get neighbor points within a range of radius
+		kd_eth.find_closest_K_points(p, 1, neighbors, squared_distances);
+
+		if (sqrt(squared_distances[0]) < voxelSize){
+			visiblelist.push_back(true);
+		}
+		else{
+			visiblelist.push_back(false);
+		}
+	}
+
+	kd_eth.begin();
+	free(pointSet);
+	pointSet = NULL;
+
+	delete vpointCloud;
+	vpointCloud = NULL;
+}
+
 //just for debug
 void ITMMainEngine::saveHashTable(const std::string &filename){
 	ORUtils::MemoryBlock<ITMHashEntry> *hashEntries = new ORUtils::MemoryBlock<ITMHashEntry>(SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE, MEMORYDEVICE_CPU);
@@ -946,6 +1016,89 @@ void ITMMainEngine::saveSDFs(const ITMScene<ITMVoxel, ITMVoxelIndex> *scene, con
 	free(hashTable);
 	voxels = NULL;
 	hashTable = NULL;
+}
+
+void ITMMainEngine::getAllSurfacePoints(std::vector<Vector3f> &points, std::vector<Vector3f> &normals, const bool withNormals){
+	ORUtils::MemoryBlock<ITMHashEntry> *hashEntries = new ORUtils::MemoryBlock<ITMHashEntry>(SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE, MEMORYDEVICE_CPU);
+	ITMHashEntry *hashTable = hashEntries->GetData(MEMORYDEVICE_CPU);
+	ITMVoxel *voxels = (ITMVoxel*)malloc(SDF_LOCAL_BLOCK_NUM*SDF_BLOCK_SIZE3 * sizeof(ITMVoxel));
+
+	bool flag = false;
+#ifndef COMPILE_WITHOUT_CUDA
+	flag = true;
+#endif
+	if (flag){
+		ITMSafeCall(cudaMemcpy(hashTable, scene->index.GetEntries(), (SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE)*sizeof(ITMHashEntry), cudaMemcpyDeviceToHost));
+		ITMSafeCall(cudaMemcpy(voxels, scene->localVBA.GetVoxelBlocks(), SDF_LOCAL_BLOCK_NUM*SDF_BLOCK_SIZE3*sizeof(ITMVoxel), cudaMemcpyDeviceToHost));
+	}
+	else{
+		memcpy(hashTable, scene->index.GetEntries(), (SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE)*sizeof(ITMHashEntry));
+		memcpy(voxels, scene->localVBA.GetVoxelBlocks(), SDF_LOCAL_BLOCK_NUM*SDF_BLOCK_SIZE3 * sizeof(ITMVoxel));
+	}
+
+	float mu = scene->sceneParams->mu;
+
+	for (int i = 0; i < SDF_BUCKET_NUM * 1 + SDF_EXCESS_LIST_SIZE; i++){
+		const ITMHashEntry &hashEntry = hashTable[i];
+
+		if (hashEntry.ptr >= 0){
+			for (int j = 0; j < SDF_BLOCK_SIZE3; j++){
+				ITMVoxel res = voxels[(hashEntry.ptr * SDF_BLOCK_SIZE3) + j];
+
+				float value = ITMVoxel::SDF_valueToFloat(res.sdf);
+				if (value<10 * mu&&value>-10 * mu){ //mu=0.02
+					Vector3f p;
+					float voxelSize = 0.125f;
+					float blockSizeWorld = scene->sceneParams->voxelSize*SDF_BLOCK_SIZE; // = 0.005*8;
+
+					p.z = (hashEntry.pos.z + (j / (SDF_BLOCK_SIZE*SDF_BLOCK_SIZE) + 0.5f)*voxelSize)*blockSizeWorld;
+					p.y = (hashEntry.pos.y + ((j % (SDF_BLOCK_SIZE*SDF_BLOCK_SIZE)) / SDF_BLOCK_SIZE + 0.5f)*voxelSize)*blockSizeWorld;
+					p.x = (hashEntry.pos.x + ((j % (SDF_BLOCK_SIZE*SDF_BLOCK_SIZE)) % SDF_BLOCK_SIZE + 0.5f)*voxelSize)*blockSizeWorld;
+
+					if (withNormals){
+						Vector3f n;
+
+						Vector3f pt((hashEntry.pos.x*SDF_BLOCK_SIZE + ((j % (SDF_BLOCK_SIZE*SDF_BLOCK_SIZE)) % SDF_BLOCK_SIZE + 0.5f)), (hashEntry.pos.y*SDF_BLOCK_SIZE + ((j % (SDF_BLOCK_SIZE*SDF_BLOCK_SIZE)) / SDF_BLOCK_SIZE + 0.5f)), (hashEntry.pos.z*SDF_BLOCK_SIZE + (j / (SDF_BLOCK_SIZE*SDF_BLOCK_SIZE) + 0.5f)));
+
+						Vector3f normal_host = computeSingleNormalFromSDF(voxels, hashTable, pt);
+
+						float normScale = 1.0f / sqrtf(normal_host.x * normal_host.x + normal_host.y * normal_host.y + normal_host.z * normal_host.z);
+						normal_host *= normScale;
+
+						Vector3f pn(normal_host[0], normal_host[1], normal_host[2]);
+						Vector3f tem(-p.x, -p.y, -p.z);
+
+						double dotvalue = pn.x*tem.x + pn.y*tem.y + pn.z*tem.z;
+						if (dotvalue < 0){
+							pn = -pn;
+						}
+
+						n.x = pn.x;
+						n.y = pn.y;
+						n.z = pn.z;
+
+						normals.push_back(n);
+					}
+
+					points.push_back(p);
+				}
+			}
+		}
+	}
+
+	free(voxels);
+	free(hashTable);
+	voxels = NULL;
+	hashTable = NULL;
+}
+
+void ITMMainEngine::saveSurfacePoints(const std::string &filename){
+	std::vector<Vector3f> points;
+	std::vector<Vector3f> normals;
+	std::vector<Vector3u> colors;
+
+	getAllSurfacePoints(points, normals, true);
+	PointsIO::savePLYfile(filename, points, normals, colors);
 }
 
 ////Hao added it: reset all voxels

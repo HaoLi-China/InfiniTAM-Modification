@@ -45,6 +45,9 @@ ITMLibSettings::ITMLibSettings(void)
 	//trackerType = TRACKER_IMU;
 	//trackerType = TRACKER_WICP;
 
+	useMechanicalFusion = true;
+	useControlPoints = false;
+
 	/// model the sensor noise as  the weight for weighted ICP
 	modelSensorNoise = false;
 	if (trackerType == TRACKER_WICP) modelSensorNoise = true;

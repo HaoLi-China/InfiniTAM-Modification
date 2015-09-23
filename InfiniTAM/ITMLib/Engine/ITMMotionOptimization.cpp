@@ -80,14 +80,14 @@ MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, ITMFloatImage *newDe
 	}
 
 	//PointsIO::savePLYfile("vpoints.ply", vpoints, vnormals);
-	PointsIO::savePLYfile("vpoints.ply", vpoints, vnormals, Vector3u(255, 0, 0));
+	//PointsIO::savePLYfile("vpoints.ply", vpoints, vnormals, Vector3u(255, 0, 0));
 
 	//updatePointsNormals();
 	float *depth = newDepthImage->GetData(MEMORYDEVICE_CPU);
 	computeDpoints(depth);
 
-	std::vector<Vector3f> dnormals;
-	PointsIO::savePLYfile("dpoints.ply", dpoints, dnormals, Vector3u(0, 0, 255));
+	//std::vector<Vector3f> dnormals;
+	//PointsIO::savePLYfile("dpoints.ply", dpoints, dnormals, Vector3u(0, 0, 255));
 }
 
 //update all warp info in nodes' info
