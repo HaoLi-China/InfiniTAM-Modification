@@ -89,9 +89,13 @@ namespace ITMLib
 			std::vector<Vector3f> vpoints; // visible points
 			std::vector<Vector3f> vnormals; // visible points' normals
 			std::vector<int> visibles; // n, visible nodes
+			std::vector<bool> livelist; // n, live nodes
 			std::vector<double> x0; // 6 * n warp transformations, n represents all nodes
 
-			std::vector<std::vector<unsigned int>> neighborhood;  // n, neighbors of each node
+			std::vector<std::vector<unsigned int>> neighborhood;  // n, neighbor nodes of each node
+
+			float alfa;
+			float beta;
 			float lambda;
 
 			int depth_image_width;

@@ -27,7 +27,8 @@ ImageFileEngine::ImageFileEngine(const char *calibFilename, const char *depthDat
 	imageSize_rgb = Vector2i(640, 360);
 
 	nDepthMinReliableDistance = 500;
-	nDepthMaxDistance = USHRT_MAX;
+	//nDepthMaxDistance = USHRT_MAX;
+	nDepthMaxDistance = 1800;
 
 	this->calib.intrinsics_d.SetFrom(366.685, 366.685, 256.52, 208.1, 640, 480);
 	this->calib.disparityCalib.type = ITMDisparityCalib::TRAFO_AFFINE;
@@ -111,7 +112,8 @@ void ImageFileEngine::getImages(ITMUChar4Image *rgbImage, ITMShortImage *rawDept
 		for (int i = 0; i < depth_width*depth_height; i++)
 		{
 			ushort depthPix = depth_buffer[i];
-			depth[i] = (depthPix >= nDepthMinReliableDistance) && (depthPix <= nDepthMaxDistance) ? (short)depthPix : -1;
+			//depth[i] = (depthPix >= nDepthMinReliableDistance) && (depthPix <= nDepthMaxDistance) ? (short)depthPix : -1;
+			depth[i] = (depthPix >= nDepthMinReliableDistance) && (depthPix <= nDepthMaxDistance) && ((i % depth_width) >= (depth_width / 4)) && ((i % depth_width) <= (depth_width * 3 / 4)) ? (short)depthPix : -1;
 		}
 		delete[]depth_buffer;
 	}

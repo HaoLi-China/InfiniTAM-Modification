@@ -12,7 +12,10 @@ using namespace ITMLib::Engine;
 
 MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, ITMFloatImage *newDepthImage)
 {
-	lambda = 0.1f;
+	alfa = 0.0f;
+	beta = 0.0f;
+	lambda = 0.0f;
+
 	depth_image_width = newDepthImage->noDims.x;
 	depth_image_height = newDepthImage->noDims.y;
 
@@ -27,13 +30,6 @@ MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, ITMFloatImage *newDe
 	malys->getCalib(calib);
 	malys->getAllVisibleList(visiblelist);
 
-	Vector3f *pointSet = (Vector3f*)malloc((points.size())*sizeof(Vector3f));
-	for (int i = 0; i < points.size(); i++){
-		pointSet[i].x = points[i].x;
-		pointSet[i].y = points[i].y;
-		pointSet[i].z = points[i].z;
-	}
-
 	for (int i = 0; i < tfs.size(); i++){		
 		x0.push_back(tfs[i].tx);
 		x0.push_back(tfs[i].ty);
@@ -42,24 +38,6 @@ MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, ITMFloatImage *newDe
 		x0.push_back(tfs[i].rz);
 		x0.push_back(tfs[i].rx);
 	}
-
-	KdTreeSearch_ETH kd_eth;
-	kd_eth.add_vertex_set(pointSet, points.size());
-	kd_eth.end();
-
-	std::vector<unsigned int> neighbors;
-	for (int i = 0; i < points.size(); i++){
-		Vector3f p = points[i];
-
-		//get neighbor points within a range of radius
-		//kd_eth.find_points_in_radius(p, 0.01, neighbors);
-		kd_eth.find_closest_K_points(p, 3, neighbors);
-		neighborhood.push_back(neighbors);
-	}
-
-	kd_eth.begin();
-	free(pointSet);
-	pointSet = NULL;
 
 	int count = 0;
 	for (int i = 0; i < visiblelist.size(); i++){
@@ -88,6 +66,65 @@ MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, ITMFloatImage *newDe
 
 	//std::vector<Vector3f> dnormals;
 	//PointsIO::savePLYfile("dpoints.ply", dpoints, dnormals, Vector3u(0, 0, 255));
+	int valid_dpoints_num = 0;
+	for (int i = 0; i < dpoints.size(); i++){
+		if (dpoints[i].z != -1){
+			valid_dpoints_num++;
+		}
+	}
+
+	Vector3f *visiblePointSet = (Vector3f*)malloc(valid_dpoints_num*sizeof(Vector3f));
+	memset(visiblePointSet, 0, valid_dpoints_num*sizeof(Vector3f));
+	Vector3f *allPointSet = (Vector3f*)malloc(points.size()*sizeof(Vector3f));
+	memset(allPointSet, 0, points.size()*sizeof(Vector3f));
+
+	int id = 0;
+	for (int i = 0; i < points.size(); i++){
+		if (visibles[i] != -1 && dpoints[visibles[i]].z != -1){
+			visiblePointSet[id].x = points[i].x;
+			visiblePointSet[id].y = points[i].y;
+			visiblePointSet[id].z = points[i].z;
+
+			id++;
+		}
+
+		allPointSet[i].x = points[i].x;
+		allPointSet[i].y = points[i].y;
+		allPointSet[i].z = points[i].z;
+	}
+
+	KdTreeSearch_ETH kd_eth1;
+	kd_eth1.add_vertex_set(visiblePointSet, valid_dpoints_num);
+	kd_eth1.end();
+
+	KdTreeSearch_ETH kd_eth2;
+	kd_eth2.add_vertex_set(allPointSet, points.size());
+	kd_eth2.end();
+
+	std::vector<unsigned int> neighbors;
+	for (int i = 0; i < points.size(); i++){
+		Vector3f p = points[i];
+		//get neighbor points within a range of radius(0.04m)
+		kd_eth1.find_points_in_radius(p, 0.0016, neighbors);
+
+		if (neighbors.size()==0){
+			livelist.push_back(false);
+			kd_eth2.find_closest_K_points(p, 4, neighbors);
+		}
+		else{
+			livelist.push_back(true);
+		}
+
+		neighborhood.push_back(neighbors);
+	}
+
+	kd_eth1.begin();
+	free(visiblePointSet);
+	visiblePointSet = NULL;
+
+	kd_eth2.begin();
+	free(allPointSet);
+	allPointSet = NULL;
 }
 
 //update all warp info in nodes' info
@@ -411,7 +448,6 @@ static int motions_progress(
 void ITMMotionAnalysis::optimizeEnergyFunction(ITMFloatImage *newDepthImage)
 {
 	MotionsData data(this, newDepthImage);
-	data.lambda = 1.0;
 
 	int n = data.x0.size();
 	lbfgsfloatval_t *x = lbfgs_malloc(n);
@@ -478,9 +514,12 @@ double motions_function(const std::vector<double> &x, std::vector<double> &grad,
 	const std::vector<Vector3f>& dpoints = d->dpoints;
 	const std::vector<double>& x0 = d->x0;
 	const std::vector<int>& visibles = d->visibles;
+	const std::vector<bool>& livelist = d->livelist;
 	const std::vector<std::vector<unsigned int>>& neighborhood = d->neighborhood;
 	ITMMotionAnalysis* malys = d->malys;
-	float lambda = d->lambda;
+	//float lambda = d->lambda;
+	float alfa = d->alfa;
+	float beta = d->beta;
 	//////////////////////////////////////////////////////////////////////////
 	// initialize
 	double f = 0;
@@ -577,9 +616,22 @@ double motions_function(const std::vector<double> &x, std::vector<double> &grad,
 		std::vector<float> iRot, iTrans;
 		malys->Transformation2RotTrans(tf_ic, iRot, iTrans);
 
+		float factor = 0.0f;
+
+		if (livelist[i]){
+			factor = alfa;
+		}
+		else{
+			factor = beta;
+		}
+
 		//compute each sub term
 		for (int j = 0; j < neighbors.size(); j++){
 			unsigned int ind = neighbors[j];
+			if (ind == i){
+				continue;
+			}
+
 			Transformation tf_jc = { x[6 * ind], x[6 * ind + 1], x[6 * ind + 2], x[6 * ind + 3], x[6 * ind + 4], x[6 * ind + 5] };
 			std::vector<float> jRot, jTrans;
 			malys->Transformation2RotTrans(tf_jc, jRot, jTrans);
@@ -594,7 +646,7 @@ double motions_function(const std::vector<double> &x, std::vector<double> &grad,
 			float squared_distance = vij.x * vij.x + vij.y * vij.y + vij.z * vij.z;
 			Vector3f delta = mvij - mvjj;
 			double result_tem = (delta.x * delta.x + delta.y * delta.y + delta.z * delta.z) / squared_distance;
-			f += lambda * result_tem;
+			f += factor * result_tem;
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 			// gradient 
@@ -613,44 +665,44 @@ double motions_function(const std::vector<double> &x, std::vector<double> &grad,
 			float sbi_ = std::cos(x[i * 6 + 5]);
 
 			// i, tx, ty, tz
-			grad[i * 6] += lambda * 2.0f * (mvij.x - mvjj.x) * 1.0f / squared_distance;
-			grad[i * 6 + 1] += lambda * 2.0f * (mvij.y - mvjj.y) * 1.0f / squared_distance;
-			grad[i * 6 + 2] += lambda * 2.0f * (mvij.z - mvjj.z) * 1.0f / squared_distance;
+			grad[i * 6] += factor * 2.0f * (mvij.x - mvjj.x) * 1.0f / squared_distance;
+			grad[i * 6 + 1] += factor * 2.0f * (mvij.y - mvjj.y) * 1.0f / squared_distance;
+			grad[i * 6 + 2] += factor * 2.0f * (mvij.z - mvjj.z) * 1.0f / squared_distance;
 
 			// i, ry, rz, rx gradient
 			// ry
-			grad[i * 6 + 3] += (lambda / squared_distance) * 2.0f * (mvij.x - mvjj.x) * (chi_ * cai * vj.x + (shi_ * sbi - chi_ * sai * cbi) * vj.y + (chi_ * sai * sbi + shi_ * cbi) * vj.z);
-			grad[i * 6 + 3] += (lambda / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((-shi_ * cai) * vj.x + (shi_ * sai * cbi + chi_ * sbi) * vj.y + (-shi_ * sai * sbi + chi_ * cbi) * vj.z);
+			grad[i * 6 + 3] += (factor / squared_distance) * 2.0f * (mvij.x - mvjj.x) * (chi_ * cai * vj.x + (shi_ * sbi - chi_ * sai * cbi) * vj.y + (chi_ * sai * sbi + shi_ * cbi) * vj.z);
+			grad[i * 6 + 3] += (factor / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((-shi_ * cai) * vj.x + (shi_ * sai * cbi + chi_ * sbi) * vj.y + (-shi_ * sai * sbi + chi_ * cbi) * vj.z);
 
 			// rz
-			grad[i * 6 + 4] += (lambda / squared_distance) * 2.0f * (mvij.x - mvjj.x) * ((chi * cai_) * vj.x + (-chi * sai_ * cbi) * vj.y + (chi * sai_ * sbi) * vj.z);
-			grad[i * 6 + 4] += (lambda / squared_distance) * 2.0f * (mvij.y - mvjj.y) * (sai_* vj.x + (cai_ * cbi) * vj.y + (-cai_ * sbi) * vj.z);
-			grad[i * 6 + 4] += (lambda / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((-shi * cai_)* vj.x + (shi * sai_ * cbi) * vj.y + (-shi * sai_ * sbi) * vj.z);
+			grad[i * 6 + 4] += (factor / squared_distance) * 2.0f * (mvij.x - mvjj.x) * ((chi * cai_) * vj.x + (-chi * sai_ * cbi) * vj.y + (chi * sai_ * sbi) * vj.z);
+			grad[i * 6 + 4] += (factor / squared_distance) * 2.0f * (mvij.y - mvjj.y) * (sai_* vj.x + (cai_ * cbi) * vj.y + (-cai_ * sbi) * vj.z);
+			grad[i * 6 + 4] += (factor / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((-shi * cai_)* vj.x + (shi * sai_ * cbi) * vj.y + (-shi * sai_ * sbi) * vj.z);
 
 			// rx
-			grad[i * 6 + 5] += (lambda / squared_distance) * 2.0f * (mvij.x - mvjj.x) * ((shi * sbi_ - chi * sai * cbi_) * vj.y + (chi * sai * sbi_ + shi * cbi_) * vj.z);
-			grad[i * 6 + 5] += (lambda / squared_distance) * 2.0f * (mvij.y - mvjj.y) * ((cai * cbi_)* vj.y + (-cai * sbi_) * vj.z);
-			grad[i * 6 + 5] += (lambda / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((shi * sai * cbi_ + chi * sbi_) * vj.y + (-shi * sai * sbi_ + chi * cbi_) * vj.z);
+			grad[i * 6 + 5] += (factor / squared_distance) * 2.0f * (mvij.x - mvjj.x) * ((shi * sbi_ - chi * sai * cbi_) * vj.y + (chi * sai * sbi_ + shi * cbi_) * vj.z);
+			grad[i * 6 + 5] += (factor / squared_distance) * 2.0f * (mvij.y - mvjj.y) * ((cai * cbi_)* vj.y + (-cai * sbi_) * vj.z);
+			grad[i * 6 + 5] += (factor / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((shi * sai * cbi_ + chi * sbi_) * vj.y + (-shi * sai * sbi_ + chi * cbi_) * vj.z);
 
 			// j, tx, ty, tz
-			grad[ind * 6] += lambda * 2.0f * (mvij.x - mvjj.x) * (-1.0f) / squared_distance;
-			grad[ind * 6 + 1] += lambda * 2.0f * (mvij.y - mvjj.y) * (-1.0f) / squared_distance;
-			grad[ind * 6 + 2] += lambda * 2.0f * (mvij.z - mvjj.z) * (-1.0f) / squared_distance;
+			grad[ind * 6] += factor * 2.0f * (mvij.x - mvjj.x) * (-1.0f) / squared_distance;
+			grad[ind * 6 + 1] += factor * 2.0f * (mvij.y - mvjj.y) * (-1.0f) / squared_distance;
+			grad[ind * 6 + 2] += factor * 2.0f * (mvij.z - mvjj.z) * (-1.0f) / squared_distance;
 
 			// j, ry, rz, rx gradient
 			// ry
-			grad[ind * 6 + 3] += (-lambda / squared_distance) * 2.0f * (mvij.x - mvjj.x) * (chi_ * cai * vj.x + (shi_ * sbi - chi_ * sai * cbi) * vj.y + (chi_ * sai * sbi + shi_ * cbi) * vj.z);
-			grad[ind * 6 + 3] += (-lambda / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((-shi_ * cai) * vj.x + (shi_ * sai * cbi + chi_ * sbi) * vj.y + (-shi_ * sai * sbi + chi_ * cbi) * vj.z);
+			grad[ind * 6 + 3] += (-factor / squared_distance) * 2.0f * (mvij.x - mvjj.x) * (chi_ * cai * vj.x + (shi_ * sbi - chi_ * sai * cbi) * vj.y + (chi_ * sai * sbi + shi_ * cbi) * vj.z);
+			grad[ind * 6 + 3] += (-factor / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((-shi_ * cai) * vj.x + (shi_ * sai * cbi + chi_ * sbi) * vj.y + (-shi_ * sai * sbi + chi_ * cbi) * vj.z);
 
 			// rz
-			grad[ind * 6 + 4] += (-lambda / squared_distance) * 2.0f * (mvij.x - mvjj.x) * ((chi * cai_) * vj.x + (-chi * sai_ * cbi) * vj.y + (chi * sai_ * sbi) * vj.z);
-			grad[ind * 6 + 4] += (-lambda / squared_distance) * 2.0f * (mvij.y - mvjj.y) * (sai_* vj.x + (cai_ * cbi) * vj.y + (-cai_ * sbi) * vj.z);
-			grad[ind * 6 + 4] += (-lambda / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((-shi * cai_)* vj.x + (shi * sai_ * cbi) * vj.y + (-shi * sai_ * sbi) * vj.z);
+			grad[ind * 6 + 4] += (-factor / squared_distance) * 2.0f * (mvij.x - mvjj.x) * ((chi * cai_) * vj.x + (-chi * sai_ * cbi) * vj.y + (chi * sai_ * sbi) * vj.z);
+			grad[ind * 6 + 4] += (-factor / squared_distance) * 2.0f * (mvij.y - mvjj.y) * (sai_* vj.x + (cai_ * cbi) * vj.y + (-cai_ * sbi) * vj.z);
+			grad[ind * 6 + 4] += (-factor / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((-shi * cai_)* vj.x + (shi * sai_ * cbi) * vj.y + (-shi * sai_ * sbi) * vj.z);
 
 			// rx
-			grad[ind * 6 + 5] += (-lambda / squared_distance) * 2.0f * (mvij.x - mvjj.x) * ((shi * sbi_ - chi * sai * cbi_) * vj.y + (chi * sai * sbi_ + shi * cbi_) * vj.z);
-			grad[ind * 6 + 5] += (-lambda / squared_distance) * 2.0f * (mvij.y - mvjj.y) * ((cai * cbi_)* vj.y + (-cai * sbi_) * vj.z);
-			grad[ind * 6 + 5] += (-lambda / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((shi * sai * cbi_ + chi * sbi_) * vj.y + (-shi * sai * sbi_ + chi * cbi_) * vj.z);
+			grad[ind * 6 + 5] += (-factor / squared_distance) * 2.0f * (mvij.x - mvjj.x) * ((shi * sbi_ - chi * sai * cbi_) * vj.y + (chi * sai * sbi_ + shi * cbi_) * vj.z);
+			grad[ind * 6 + 5] += (-factor / squared_distance) * 2.0f * (mvij.y - mvjj.y) * ((cai * cbi_)* vj.y + (-cai * sbi_) * vj.z);
+			grad[ind * 6 + 5] += (-factor / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((shi * sai * cbi_ + chi * sbi_) * vj.y + (-shi * sai * sbi_ + chi * cbi_) * vj.z);
 		}
 	}
 
@@ -662,7 +714,6 @@ double motions_function(const std::vector<double> &x, std::vector<double> &grad,
 void ITMMotionAnalysis::optimizeEnergyFunctionNlopt(ITMFloatImage *newDepthImage)
 {
 	MotionsData data(this, newDepthImage);
-	data.lambda = 0.0f;
 
 	int n = data.x0.size();
 	std::vector<double> x(n);

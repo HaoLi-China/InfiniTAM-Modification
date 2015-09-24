@@ -88,9 +88,9 @@ void KdTreeSearch_ETH::find_closest_K_points(
 
 	unsigned int num = get_tree(tree_)->getNOfFoundNeighbours();
 	if (num == k && num > 1) {
-		neighbor_indices.resize(num - 1);
-		for (unsigned int i = 0; i < num - 1; ++i) {
-			neighbor_indices[i] = get_tree(tree_)->getNeighbourPositionIndex(i + 1);
+		neighbor_indices.resize(num);
+		for (unsigned int i = 0; i < num; ++i) {
+			neighbor_indices[i] = get_tree(tree_)->getNeighbourPositionIndex(i);
 		}
 	}
 	else
@@ -155,9 +155,9 @@ void KdTreeSearch_ETH::find_points_in_radius(const Vector3f& p, double squared_r
 	get_tree(tree_)->queryRange(v3d, squared_radius, true);
 
 	unsigned int num = get_tree(tree_)->getNOfFoundNeighbours();
-	neighbor_indices.resize(num-1);
-	for (unsigned int i = 0; i < num-1; ++i) {
-		neighbor_indices[i] = get_tree(tree_)->getNeighbourPositionIndex(i+1);
+	neighbor_indices.resize(num);
+	for (unsigned int i = 0; i < num; ++i) {
+		neighbor_indices[i] = get_tree(tree_)->getNeighbourPositionIndex(i);
 	}
 }
 
