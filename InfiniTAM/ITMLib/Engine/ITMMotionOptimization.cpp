@@ -12,8 +12,8 @@ using namespace ITMLib::Engine;
 
 MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, ITMFloatImage *newDepthImage)
 {
-	alfa = 0.0f;
-	beta = 0.0f;
+	alfa = 100.0f;
+	beta = 100.0f;
 	lambda = 0.0f;
 
 	depth_image_width = newDepthImage->noDims.x;
@@ -110,11 +110,11 @@ MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, ITMFloatImage *newDe
 	kd_eth2.add_vertex_set(allPointSet, points.size());
 	kd_eth2.end();
 
-	std::vector<unsigned int> neighbors;
 	for (int i = 0; i < points.size(); i++){
 		Vector3f p = points[i];
 		//get neighbor points within a range of radius(0.04m)
 		//kd_eth1.find_points_in_radius(p, 0.0016, neighbors);
+		std::vector<unsigned int> neighbors;
 		std::vector<double> squared_distances;
 		kd_eth1.find_closest_K_points(p, 3, neighbors, squared_distances);
 

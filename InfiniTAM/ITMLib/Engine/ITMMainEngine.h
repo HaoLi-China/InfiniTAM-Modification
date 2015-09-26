@@ -126,13 +126,12 @@ namespace ITMLib
 			void turnOnMainProcessing();
 			void turnOffMainProcessing();
 
-			void getAllOperationPoints(std::vector<Vector3f> &points, std::vector<Vector3f> &normals, std::vector<short> &sdf_s, std::vector<uchar> &w_s, const bool withNormals = false);//Hao added it
-			void getControlPoints(std::vector<Vector3f> &cpoints, std::vector<std::vector<Vector3f>> &cblocks_p, std::vector<std::vector<short>> &cblocks_sdf, std::vector<std::vector<uchar>> &cblocks_w, std::vector<Vector3f> &cnormals, const bool withNormals = false);//Hao added it
+			void getAllOperationPoints(std::vector<Vector3f> &points, std::vector<Vector3f> &normals, std::vector<Vector3f> &sur_points, std::vector<Vector3f> &sur_normals, std::vector<short> &sdf_s, std::vector<uchar> &w_s, const bool withNormals = false);//Hao added it
+			void getNewControlPoints(const std::vector<Vector3f> &uspoints, const std::vector<Vector3f> &usnormals, std::vector<Vector3f> &ncpoints, std::vector<Vector3f> &ncnormals);//Hao added it
+			void updateControlPoints(const std::vector<Vector3f> &sur_points, const std::vector<Vector3f> &sur_normals, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals);//Hao added it
 			void getVisibleControlPoints(const std::vector<Vector3f> &cpoints, std::vector<bool> &visiblelist);//Hao added it
-			void getAllOperationPoints(const std::vector<std::vector<Vector3f>> &cblocks_p, const std::vector<std::vector<short>> &cblocks_sdf, const std::vector<std::vector<uchar>> &cblocks_w, std::vector<Vector3f> &points, std::vector<short> &sdf_s, std::vector<uchar> &w_s);//Hao added it
 			void transformVoxels(const std::vector<Vector3f> &points, const std::vector<short> &sdf_s, const std::vector<uchar> &w_s, const std::vector<Transformation> &tfs);//Hao added it
 			void resetAllVoxels();//Hao added it
-			void computeControlPoints(const ITMVoxel *voxels, const ITMHashEntry *hashTable, const ITMHashEntry &hashEntry, const std::vector<Vector3f> &relatedPoints, const std::vector<short> &sdfs, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, bool &cPExisting, const bool withNormals);
 			void getVisiblePoints(const std::vector<Vector3f> &points, std::vector<bool> &visiblelist);//Hao added it
 			void getAllSurfacePoints(std::vector<Vector3f> &points, std::vector<Vector3f> &normals, const bool withNormals = false);//Hao added it
 			void saveSurfacePoints(const std::string &filename);//Hao added it
@@ -141,6 +140,10 @@ namespace ITMLib
 
 
 			Vector2i trackedImageSize;//Hao added it
+			const float CP_RESOLUTION = 0.04;//Hao added it
+			std::vector<Vector3f> cpoints;
+			std::vector<Vector3f> cnormals;
+
 			/** \brief Constructor
 			    Ommitting a separate image size for the depth images
 			    will assume same resolution as for the RGB images.

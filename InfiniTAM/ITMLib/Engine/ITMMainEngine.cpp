@@ -130,21 +130,20 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 		//init motion analysis
 		std::vector<Vector3f> points;
 		std::vector<Vector3f> normals;
+		std::vector<Vector3f> sur_points;
+		std::vector<Vector3f> sur_normals;
 		std::vector<short> sdf_s;
 		std::vector<uchar> w_s;
-		std::vector<Vector3f> cpoints;
-		std::vector<Vector3f> cnormals;
+		std::vector<Vector3f> ncpoints;
+		std::vector<Vector3f> ncnormals;
 		std::vector<bool> visiblelist;// visiblelist size = cpoints size
-		std::vector<std::vector<Vector3f>> cblocks_p;
-		std::vector<std::vector<short>> cblocks_sdf;
-		std::vector<std::vector<uchar>> cblocks_w;
 	
 		if (settings->useControlPoints){
-			getControlPoints(cpoints, cblocks_p, cblocks_sdf, cblocks_w, cnormals, true);
-			getAllOperationPoints(cblocks_p, cblocks_sdf, cblocks_w, points, sdf_s, w_s);
+			getAllOperationPoints(points, normals, sur_points, sur_normals, sdf_s, w_s, true);
+			updateControlPoints(sur_points, sur_normals, cpoints, cnormals);
 		}
 		else{
-			getAllOperationPoints(points, normals, sdf_s, w_s, true);
+			getAllOperationPoints(points, normals, sur_points, sur_normals, sdf_s, w_s, true);
 		}
 
 		//just for debug
@@ -159,18 +158,18 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 
 			//transform
 			std::vector<Transformation> tfs;
-			motionAnalysis->getAllSurfacePointsTransformation(cblocks_p, cpoints, tfs);
+			motionAnalysis->getAllOperationPointsTransformation(points, cpoints, cnormals, tfs);
 			denseMapper->ResetScene(scene);
 			transformVoxels(points, sdf_s, w_s, tfs);
 		}
 		else if (!(settings->useControlPoints) && points.size() > 0){
-			getVisiblePoints(points, visiblelist);
-			motionAnalysis->initialize(points, normals, visiblelist);
+			getVisiblePoints(sur_points, visiblelist);
+			motionAnalysis->initialize(sur_points, sur_normals, visiblelist);
 			motionAnalysis->optimizeEnergyFunctionNlopt(view->depth);
 
 			//transform
 			std::vector<Transformation> tfs;
-			motionAnalysis->getAllSurfacePointsTransformation(cblocks_p, points, tfs);
+			motionAnalysis->getAllOperationPointsTransformation(points, sur_points, sur_normals, tfs);
 			denseMapper->ResetScene(scene);
 			transformVoxels(points, sdf_s, w_s, tfs);
 		}
@@ -257,10 +256,14 @@ void ITMMainEngine::turnOffIntegration() { fusionActive = false; }
 void ITMMainEngine::turnOnMainProcessing() { mainProcessingActive = true; }
 void ITMMainEngine::turnOffMainProcessing() { mainProcessingActive = false; }
 
-//Hao added it: get all surface points
-void ITMMainEngine::getAllOperationPoints(std::vector<Vector3f> &points, std::vector<Vector3f> &normals, std::vector<short> &sdf_s, std::vector<uchar> &w_s, const bool withNormals){
+//Hao added it: get all operation points
+void ITMMainEngine::getAllOperationPoints(std::vector<Vector3f> &points, std::vector<Vector3f> &normals, std::vector<Vector3f> &sur_points, std::vector<Vector3f> &sur_normals, std::vector<short> &sdf_s, std::vector<uchar> &w_s, const bool withNormals){
 	points.clear();
 	normals.clear();
+	sur_points.clear();
+	sur_normals.clear();
+	sdf_s.clear();
+	w_s.clear();
 
 	ORUtils::MemoryBlock<ITMHashEntry> *hashEntries = new ORUtils::MemoryBlock<ITMHashEntry>(SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE, MEMORYDEVICE_CPU);
 	ITMHashEntry *hashTable = hashEntries->GetData(MEMORYDEVICE_CPU);
@@ -291,9 +294,9 @@ void ITMMainEngine::getAllOperationPoints(std::vector<Vector3f> &points, std::ve
 				float value = ITMVoxel::SDF_valueToFloat(res.sdf);
 				if (value<50 * mu&&value>-50 * mu){ //mu=0.02
 					//cout<<"value:"<<value<<endl;
-				    sdf_s.push_back(res.sdf);
+					sdf_s.push_back(res.sdf);
 					w_s.push_back(res.w_depth);
-					
+
 					Vector3f p;
 					float voxelSize = 0.125f;
 					float blockSizeWorld = scene->sceneParams->voxelSize*SDF_BLOCK_SIZE; // = 0.005*8;
@@ -325,93 +328,19 @@ void ITMMainEngine::getAllOperationPoints(std::vector<Vector3f> &points, std::ve
 						n.z = pn.z;
 
 						normals.push_back(n);
+
+						if (value<10 * mu&&value>-10 * mu){
+							sur_normals.push_back(p);
+						}
 					}
 
 					points.push_back(p);
-				}
-			}
-		}
-	}
 
-	free(voxels);
-	free(hashTable);
-	voxels = NULL;
-	hashTable = NULL;
-}
-
-//Hao added it: get control points
-void ITMMainEngine::getControlPoints(std::vector<Vector3f> &cpoints, std::vector<std::vector<Vector3f>> &cblocks_p, std::vector<std::vector<short>> &cblocks_sdf, std::vector<std::vector<uchar>> &cblocks_w, std::vector<Vector3f> &cnormals, const bool withNormals){
-	cpoints.clear();
-	cnormals.clear();
-	cblocks_p.clear();
-	cblocks_sdf.clear();
-	cblocks_w.clear();
-
-	ORUtils::MemoryBlock<ITMHashEntry> *hashEntries = new ORUtils::MemoryBlock<ITMHashEntry>(SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE, MEMORYDEVICE_CPU);
-	ITMHashEntry *hashTable = hashEntries->GetData(MEMORYDEVICE_CPU);
-	ITMVoxel *voxels = (ITMVoxel*)malloc(SDF_LOCAL_BLOCK_NUM*SDF_BLOCK_SIZE3 * sizeof(ITMVoxel));
-
-	bool flag = false;
-#ifndef COMPILE_WITHOUT_CUDA
-	flag = true;
-#endif
-	if (flag){
-		ITMSafeCall(cudaMemcpy(hashTable, scene->index.GetEntries(), (SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE)*sizeof(ITMHashEntry), cudaMemcpyDeviceToHost));
-		ITMSafeCall(cudaMemcpy(voxels, scene->localVBA.GetVoxelBlocks(), SDF_LOCAL_BLOCK_NUM*SDF_BLOCK_SIZE3*sizeof(ITMVoxel), cudaMemcpyDeviceToHost));
-	}
-	else{
-		memcpy(hashTable, scene->index.GetEntries(), (SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE)*sizeof(ITMHashEntry));
-		memcpy(voxels, scene->localVBA.GetVoxelBlocks(), SDF_LOCAL_BLOCK_NUM*SDF_BLOCK_SIZE3 * sizeof(ITMVoxel));
-	}
-
-	float mu = scene->sceneParams->mu;
-
-	int count = 0;
-
-	for (int i = 0; i < SDF_BUCKET_NUM * 1 + SDF_EXCESS_LIST_SIZE; i++){
-		const ITMHashEntry &hashEntry = hashTable[i];
-
-		if (hashEntry.ptr >= 0){
-			std::vector<Vector3f> pts0;
-			std::vector<short> sdf0;
-			std::vector<uchar> w0;
-
-			count++;
-
-			for (int a = 0; a < SDF_BLOCK_SIZE; a++){
-				for (int b = 0; b < SDF_BLOCK_SIZE; b++){
-					for (int c = 0; c < SDF_BLOCK_SIZE; c++){
-						int j = a*SDF_BLOCK_SIZE*SDF_BLOCK_SIZE + b*SDF_BLOCK_SIZE + c;
-						ITMVoxel res = voxels[(hashEntry.ptr * SDF_BLOCK_SIZE3) + j];
-
-						float value = ITMVoxel::SDF_valueToFloat(res.sdf);
-						if (value<50 * mu&&value>-50 * mu){ //mu=0.02
-							Vector3f p;
-							float voxelSize = 0.125f;
-							float blockSizeWorld = scene->sceneParams->voxelSize*SDF_BLOCK_SIZE; // = 0.005*8;
-
-							p.z = (hashEntry.pos.z + (j / (SDF_BLOCK_SIZE*SDF_BLOCK_SIZE) + 0.5f)*voxelSize)*blockSizeWorld;
-							p.y = (hashEntry.pos.y + ((j % (SDF_BLOCK_SIZE*SDF_BLOCK_SIZE)) / SDF_BLOCK_SIZE + 0.5f)*voxelSize)*blockSizeWorld;
-							p.x = (hashEntry.pos.x + ((j % (SDF_BLOCK_SIZE*SDF_BLOCK_SIZE)) % SDF_BLOCK_SIZE + 0.5f)*voxelSize)*blockSizeWorld;
-
-							pts0.push_back(p);
-							sdf0.push_back(res.sdf);
-							w0.push_back(res.w_depth);
-						}
+					if (value<10 * mu&&value>-10 * mu){
+						sur_points.push_back(p);
 					}
 				}
 			}
-
-			if (pts0.size() > 0){
-				bool cPExisting;
-				computeControlPoints(voxels, hashTable, hashEntry, pts0, sdf0, cpoints, cnormals, cPExisting, withNormals);
-
-				if (cPExisting){
-					cblocks_p.push_back(pts0);
-					cblocks_sdf.push_back(sdf0);
-					cblocks_w.push_back(w0);
-				}
-			}
 		}
 	}
 
@@ -421,89 +350,107 @@ void ITMMainEngine::getControlPoints(std::vector<Vector3f> &cpoints, std::vector
 	hashTable = NULL;
 }
 
-//Hao added it: compute control points
-void ITMMainEngine::computeControlPoints(const ITMVoxel *voxels, const ITMHashEntry *hashTable, const ITMHashEntry &hashEntry, const std::vector<Vector3f> &relatedPoints, const std::vector<short> &sdfs, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, bool &cPExisting, const bool withNormals){
-	int a = 3;
-	int b = 3;
-	int c = 3;
-	int j = a*SDF_BLOCK_SIZE*SDF_BLOCK_SIZE + b*SDF_BLOCK_SIZE + c;
-
-	cPExisting = false;
-
-	Vector3f cenPoint;
-	float voxelSize = 0.125f;
-	float blockSizeWorld = scene->sceneParams->voxelSize*SDF_BLOCK_SIZE; // = 0.005*8;
-
-	cenPoint.z = (hashEntry.pos.z + (j / (SDF_BLOCK_SIZE*SDF_BLOCK_SIZE) + 0.5f)*voxelSize)*blockSizeWorld;
-	cenPoint.y = (hashEntry.pos.y + ((j % (SDF_BLOCK_SIZE*SDF_BLOCK_SIZE)) / SDF_BLOCK_SIZE + 0.5f)*voxelSize)*blockSizeWorld;
-	cenPoint.x = (hashEntry.pos.x + ((j % (SDF_BLOCK_SIZE*SDF_BLOCK_SIZE)) % SDF_BLOCK_SIZE + 0.5f)*voxelSize)*blockSizeWorld;
+//Hao added it: update control points
+void ITMMainEngine::updateControlPoints(const std::vector<Vector3f> &sur_points, const std::vector<Vector3f> &sur_normals, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals){
 	
-	cenPoint.x += scene->sceneParams->voxelSize / 2.0f;
-	cenPoint.y += scene->sceneParams->voxelSize / 2.0f;
-	cenPoint.z += scene->sceneParams->voxelSize / 2.0f;
+	if (cpoints.size() == 0){
+		std::vector<Vector3f> ncpoints;
+		std::vector<Vector3f> ncnormals;
+		getNewControlPoints(sur_points, sur_normals, ncpoints, ncnormals);
 
-	Vector3f conPoint(0, 0, 0);
-	double min = 1.0f;
-	for (int i = 0; i < relatedPoints.size(); i++){
-		float x = relatedPoints[i].x;
-		float y = relatedPoints[i].y;
-		float z = relatedPoints[i].z;
+		for (int i = 0; i < ncpoints.size(); i++){
+			cpoints.push_back(ncpoints[i]);
+			cnormals.push_back(ncnormals[i]);
+		}
 
-		double dis = (cenPoint.x - x)*(cenPoint.x - x) + (cenPoint.y - y)*(cenPoint.y - y) + (cenPoint.z - z)*(cenPoint.z - z);
-		if ((sdfs[i] / 32767.0f) <= 0.1f && (sdfs[i] / 32767.0f) >= -0.1f && min > abs((sdfs[i] / 32767.0f) * dis)){
-			min = abs((sdfs[i] / 32767.0f) * dis);
-			conPoint.x = x;
-			conPoint.y = y;
-			conPoint.z = z;
-			cPExisting = true;
+		return;
+	}
+	
+	Vector3f *pointSet = (Vector3f*)malloc(cpoints.size()*sizeof(Vector3f));
+	memset(pointSet, 0, cpoints.size()*sizeof(Vector3f));
+
+	for (int i = 0; i < cpoints.size(); i++){
+		pointSet[i].x = cpoints[i].x;
+		pointSet[i].y = cpoints[i].y;
+		pointSet[i].z = cpoints[i].z;
+	}
+
+	KdTreeSearch_ETH kd_eth;
+	kd_eth.add_vertex_set(pointSet, cpoints.size());
+	kd_eth.end();
+
+	std::vector<Vector3f> uspoints;
+	std::vector<Vector3f> usnormals;
+	for (int i = 0; i < sur_points.size(); i++){
+		Vector3f p = sur_points[i]; 
+		std::vector<unsigned int> neighbors;
+		std::vector<double> squared_distances;
+		kd_eth.find_closest_K_points(p, 1, neighbors, squared_distances);
+
+		if (squared_distances[0] >= CP_RESOLUTION * CP_RESOLUTION){
+			uspoints.push_back(sur_points[i]);
+			usnormals.push_back(sur_normals[i]);
 		}
 	}
 
-	if (cPExisting){
-		if (withNormals){
-			Vector3f n;
-			Vector3f pt(conPoint.x / (blockSizeWorld*voxelSize), conPoint.y / (blockSizeWorld*voxelSize), conPoint.z / (blockSizeWorld*voxelSize));
+	kd_eth.begin();
+	free(pointSet);
+	pointSet = NULL;
 
-			Vector3f normal_host = computeSingleNormalFromSDF(voxels, hashTable, pt);
-
-			float normScale = 1.0f / sqrtf(normal_host.x * normal_host.x + normal_host.y * normal_host.y + normal_host.z * normal_host.z);
-			normal_host *= normScale;
-
-			Vector3f pn(normal_host[0], normal_host[1], normal_host[2]);
-			Vector3f tem(-conPoint.x, -conPoint.y, -conPoint.z);
-
-			double dotvalue = pn.x*tem.x + pn.y*tem.y + pn.z*tem.z;
-			if (dotvalue < 0){
-				pn = -pn;
-			}
-
-			n.x = pn.x;
-			n.y = pn.y;
-			n.z = pn.z;
-
-			cnormals.push_back(n);
-		}
-
-		cpoints.push_back(conPoint);
+	std::vector<Vector3f> ncpoints;
+	std::vector<Vector3f> ncnormals;
+	getNewControlPoints(uspoints, usnormals, ncpoints, ncnormals);
+	
+	for (int i = 0; i < ncpoints.size(); i++){
+		cpoints.push_back(ncpoints[i]);
+		cnormals.push_back(ncnormals[i]);
 	}
 }
 
-//Hao added it: get all operation points
-void ITMMainEngine::getAllOperationPoints(const std::vector<std::vector<Vector3f>> &cblocks_p, const std::vector<std::vector<short>> &cblocks_sdf, const std::vector<std::vector<uchar>> &cblocks_w, std::vector<Vector3f> &points, std::vector<short> &sdf_s, std::vector<uchar> &w_s){
-	points.clear();
-	sdf_s.clear();
-	w_s.clear();
+//Hao added it: get new control points
+void ITMMainEngine::getNewControlPoints(const std::vector<Vector3f> &uspoints, const std::vector<Vector3f> &usnormals, std::vector<Vector3f> &ncpoints, std::vector<Vector3f> &ncnormals){
+	ncpoints.clear();
+	ncnormals.clear();
 
-	for (int i = 0; i < cblocks_p.size(); i++){
-		std::vector<Vector3f> pts = cblocks_p[i];
-		std::vector<short> sdfs = cblocks_sdf[i];
-		std::vector<uchar> ws = cblocks_w[i];
-		for (int j = 0; j < pts.size(); j++){
-			points.push_back(pts[j]);
-			sdf_s.push_back(sdfs[j]);
-			w_s.push_back(ws[j]);
+	Vector3f *pointSet = (Vector3f*)malloc(uspoints.size()*sizeof(Vector3f));
+	memset(pointSet, 0, uspoints.size()*sizeof(Vector3f));
+
+	std::vector<bool> conlist;
+	for (int i = 0; i < uspoints.size(); i++){
+		pointSet[i].x = uspoints[i].x;
+		pointSet[i].y = uspoints[i].y;
+		pointSet[i].z = uspoints[i].z;
+
+		conlist.push_back(false);
+	}
+	
+	KdTreeSearch_ETH kd_eth;
+	kd_eth.add_vertex_set(pointSet, uspoints.size());
+	kd_eth.end();
+
+	
+	for (int i = 0; i < uspoints.size(); i++){
+		Vector3f p = uspoints[i];
+
+		std::vector<unsigned int> neighbors;
+		kd_eth.find_points_in_radius(p, CP_RESOLUTION * CP_RESOLUTION, neighbors);
+
+		bool flag = false;
+		for (int j = 0; j < neighbors.size(); j++){
+			int index = neighbors[j];
+			flag = (flag || conlist[index]);
+		}
+
+		if (!flag){
+			conlist[i] = true;
+			ncpoints.push_back(uspoints[i]);
+			ncnormals.push_back(usnormals[i]);
 		}
 	}
+
+	kd_eth.begin();
+	free(pointSet);
+	pointSet = NULL;
 }
 
 //Hao added it: transform voxels on surface
@@ -713,78 +660,68 @@ void ITMMainEngine::transformVoxels(const std::vector<Vector3f> &points, const s
 void ITMMainEngine::getVisibleControlPoints(const std::vector<Vector3f> &cpoints, std::vector<bool> &visiblelist){
 	visiblelist.clear();
 
-	bool *entriesCPFlag = (bool*)malloc((SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE) * sizeof(bool));
-	memset(entriesCPFlag, 0, (SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE) * sizeof(bool));
+	for (int i = 0; i < cpoints.size(); i++){
+		visiblelist.push_back(false);
+	}
 
 	ITMPointCloud *vpointCloud = new ITMPointCloud(trackedImageSize, MEMORYDEVICE_CPU);
 	Vector4f *vpoint = vpointCloud->locations->GetData(MEMORYDEVICE_CPU);
-	//Vector4f *vnormal = vpointCloud->colours->GetData(MEMORYDEVICE_CPU);
-	vpointCloud->noTotalPoints = trackedImageSize.x * trackedImageSize.y;
 
-	ORUtils::MemoryBlock<ITMHashEntry> *hashEntries = new ORUtils::MemoryBlock<ITMHashEntry>(SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE, MEMORYDEVICE_CPU);
-	ITMHashEntry *hashTable = hashEntries->GetData(MEMORYDEVICE_CPU);
+	vpointCloud->noTotalPoints = trackedImageSize.x * trackedImageSize.y;
 
 	bool flag = false;
 #ifndef COMPILE_WITHOUT_CUDA
 	flag = true;
 #endif
 	if (flag){
-		ITMSafeCall(cudaMemcpy(hashTable, scene->index.GetEntries(), (SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE)*sizeof(ITMHashEntry), cudaMemcpyDeviceToHost));
 		ITMSafeCall(cudaMemcpy(vpoint, trackingState->pointCloud->locations->GetData(MEMORYDEVICE_CUDA), trackedImageSize.x * trackedImageSize.y * sizeof(Vector4f), cudaMemcpyDeviceToHost));
-		//ITMSafeCall(cudaMemcpy(vnormal, trackingState->pointCloud->colours->GetData(MEMORYDEVICE_CUDA), trackedImageSize.x * trackedImageSize.y * sizeof(Vector4f), cudaMemcpyDeviceToHost));
 	}
 	else{
-		memcpy(hashTable, scene->index.GetEntries(), (SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE)*sizeof(ITMHashEntry));
 		memcpy(vpoint, trackingState->pointCloud->locations->GetData(MEMORYDEVICE_CUDA), trackedImageSize.x * trackedImageSize.y * sizeof(Vector4f));
-		//memcpy(vnormal, trackingState->pointCloud->colours->GetData(MEMORYDEVICE_CUDA), trackedImageSize.x * trackedImageSize.y * sizeof(Vector4f));
 	}
-
-	float blockSizeWorld = scene->sceneParams->voxelSize*SDF_BLOCK_SIZE; // = 0.005*8;
 
 	std::vector<Vector3f> vpts;
 	for (int i = 0; i < trackedImageSize.x*trackedImageSize.y; i++){
 		if (vpoint[i].w > 0){
 			Vector3f pt(vpoint[i].x, vpoint[i].y, vpoint[i].z);
-			
-			Vector3s blockPos;
-			blockPos.x = floor(pt.x / blockSizeWorld);
-			blockPos.y = floor(pt.y / blockSizeWorld);
-			blockPos.z = floor(pt.z / blockSizeWorld);
-
-			int res = FindVBIndex(blockPos, hashTable);
-
-			if (res!=-1){
-				entriesCPFlag[res] = true;
-			}
+			vpts.push_back(pt);
 		}
 	}
 
+	Vector3f *pointSet = (Vector3f*)malloc((vpts.size())*sizeof(Vector3f));
+	for (int i = 0; i < vpts.size(); i++){
+		pointSet[i].x = vpts[i].x;
+		pointSet[i].y = vpts[i].y;
+		pointSet[i].z = vpts[i].z;
+	}
+
+	KdTreeSearch_ETH kd_eth;
+	kd_eth.add_vertex_set(pointSet, vpts.size());
+	kd_eth.end();
+
+	float voxelSize = 0.005f;
+	std::vector<unsigned int> neighbors;
 	for (int i = 0; i < cpoints.size(); i++){
 		Vector3f p = cpoints[i];
+		std::vector<Vector3f> neighbors;
+		std::vector<double> squared_distances;
+		//get neighbor points within a range of radius
+		kd_eth.find_closest_K_points(p, 1, neighbors, squared_distances);
 
-		Vector3s blockPos;
-		blockPos.x = floor(p.x / blockSizeWorld);
-		blockPos.y = floor(p.y / blockSizeWorld);
-		blockPos.z = floor(p.z / blockSizeWorld);
-
-		int res = FindVBIndex(blockPos, hashTable);
-
-		if (res != -1 && entriesCPFlag[res]){
-			visiblelist.push_back(true);
+		if (sqrt(squared_distances[0]) < 2*voxelSize){
+			visiblelist[i] = true;
 		}
 		else{
-			visiblelist.push_back(false);
+			visiblelist[i] = false;
 		}
 	}
+
+	kd_eth.begin();
+	free(pointSet);
+	pointSet = NULL;
 
 	delete vpointCloud;
 	vpointCloud = NULL;
-
-	free(entriesCPFlag);
-	entriesCPFlag = NULL;
-
-	free(hashTable);
-	hashTable = NULL;
 }
 
 //Hao added it: Get Visible Points

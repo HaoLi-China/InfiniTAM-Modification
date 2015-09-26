@@ -53,7 +53,7 @@ namespace ITMLib
 			Vector3f TransformNormal(const std::vector<float>& rot, const Vector3f& normal); // transform normal
 			void RotTrans2Transformation(const std::vector<float>& rot, const std::vector<float>& trans, Transformation &tf); // get transformation
 			void Matrix42Transformation(const Matrix4f &mtf, Transformation &tf);
-			void getAllSurfacePointsTransformation(const std::vector<std::vector<Vector3f>> &cblocks_p, const std::vector<Vector3f> &cpoints, std::vector<Transformation> &tfs);
+			void getAllOperationPointsTransformation(const std::vector<Vector3f> &points, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, std::vector<Transformation> &tfs);
 
 		private:
 			ITMRGBDCalib *calib;

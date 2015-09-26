@@ -47,8 +47,11 @@ static void CreateDefaultImageSource(ImageSourceEngine* & imageSource, IMUSource
 		//const char *path1 = "E:/HaoLi/MyGithub/Mobility-Reconstruction/MobilityRecon/MobilityRecon/scan/depth_image";
 		//const char *path2 = "E:/HaoLi/MyGithub/Mobility-Reconstruction/MobilityRecon/MobilityRecon/scan/rgb_image";
 
-		const char *path1 = "..\\..\\data\\chair1_rgb_depth\\depth_image";
-		const char *path2 = "..\\..\\data\\chair1_rgb_depth\\rgb_image";
+		//const char *path1 = "..\\..\\data\\chair1_rgb_depth\\depth_image";
+		//const char *path2 = "..\\..\\data\\chair1_rgb_depth\\rgb_image";
+
+		const char *path1 = "..\\..\\data\\face_rgb_depth\\depth_image";
+		const char *path2 = "..\\..\\data\\face_rgb_depth\\rgb_image";
 
 		//const char *path1 = "..\\..\\data\\test_data1\\depth_image";
 		//const char *path2 = "..\\..\\data\\test_data1\\rgb_image";

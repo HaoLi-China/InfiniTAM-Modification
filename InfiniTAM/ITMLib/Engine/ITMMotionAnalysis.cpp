@@ -51,59 +51,71 @@ void ITMMotionAnalysis::getAllVisibleList(std::vector<bool> &visiblelist){
 	visiblelist = this->visiblelist;
 }
 
-void ITMMotionAnalysis::getAllSurfacePointsTransformation(const std::vector<std::vector<Vector3f>> &cblocks_p, const std::vector<Vector3f> &cpoints, std::vector<Transformation> &tfs){
-	if (useControlPoints){
-		std::vector<std::vector<unsigned int>> neighbor;
-		getNeighboorsOfEachNode(cpoints, 2 * INFLUENCE_RADIUS * 2 * INFLUENCE_RADIUS, neighbor);
+void ITMMotionAnalysis::getAllOperationPointsTransformation(const std::vector<Vector3f> &points, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, std::vector<Transformation> &tfs){
+	    
+	    Vector3f *pointSet = (Vector3f*)malloc((cpoints.size())*sizeof(Vector3f));
+		for (int i = 0; i < cpoints.size(); i++){
+			pointSet[i].x = cpoints[i].x;
+			pointSet[i].y = cpoints[i].y;
+			pointSet[i].z = cpoints[i].z;
+		}
 
-		for (int i = 0; i < cblocks_p.size(); i++){
-			std::vector<Vector3f> pts = cblocks_p[i];
-			std::vector<unsigned int> neighbor_cpoints = neighbor[i];
-			neighbor_cpoints.push_back(i);
+		KdTreeSearch_ETH kd_eth;
+		kd_eth.add_vertex_set(pointSet, cpoints.size());
+		kd_eth.end();
 
-			for (int j = 0; j < pts.size(); j++){
-				std::vector<double> weights;
-				std::vector<unsigned int> influence_cpoints;
-				double weight_sum = 0;
-				Transformation trans_res = { 0, 0, 0, 0, 0, 0 };
+		for (int i = 0; i < points.size(); i++){
+			Vector3f p = points[i];
 
-				for (int k = 0; k < neighbor_cpoints.size(); k++){
-					unsigned int index = neighbor_cpoints[k];
-					double squared_dis = (cpoints[index].x - pts[j].x)*(cpoints[index].x - pts[j].x) + (cpoints[index].y - pts[j].y)*(cpoints[index].y - pts[j].y) + (cpoints[index].z - pts[j].z)*(cpoints[index].z - pts[j].z);
+			//get neighbor points within a range of radius
+			std::vector<unsigned int> neighbors;
+			kd_eth.find_points_in_radius(p, INFLUENCE_RADIUS*INFLUENCE_RADIUS, neighbors);
+			
+			std::vector<double> weights;
+			double weight_sum = 0;
+			Transformation trans_res = { 0, 0, 0, 0, 0, 0 };
 
-					if (squared_dis <= INFLUENCE_RADIUS*INFLUENCE_RADIUS){
-						double weight_tem = exp(-squared_dis / (2.0*INFLUENCE_RADIUS*INFLUENCE_RADIUS));
-						weights.push_back(weight_tem);
-						influence_cpoints.push_back(index);
-						weight_sum += weight_tem;
-					}
-				}
+			for (int k = 0; k < neighbors.size(); k++){
+				unsigned int index = neighbors[k];
+				double squared_dis = (cpoints[index].x - p.x)*(cpoints[index].x - p.x) + (cpoints[index].y - p.y)*(cpoints[index].y - p.y) + (cpoints[index].z - p.z)*(cpoints[index].z - p.z);
 
-				//normalize the weight
-				for (int k = 0; k < weights.size(); k++){
-					weights[k] /= weight_sum;
-				}
+				double weight_tem = exp(-squared_dis / (2.0*INFLUENCE_RADIUS*INFLUENCE_RADIUS));
+				weights.push_back(weight_tem);
+				weight_sum += weight_tem;
+			}
 
-				//compute the new transformation
-				for (int k = 0; k < influence_cpoints.size(); k++){
-					unsigned int index = influence_cpoints[k];
-					trans_res.tx += weights[k] * ctfs[index].tx;
-					trans_res.ty += weights[k] * ctfs[index].ty;
-					trans_res.tz += weights[k] * ctfs[index].tz;
-					trans_res.ry += weights[k] * ctfs[index].ry;
-					trans_res.rz += weights[k] * ctfs[index].rz;
-					trans_res.rx += weights[k] * ctfs[index].rx;
-				}
+			//normalize the weight
+			for (int k = 0; k < weights.size(); k++){
+				weights[k] /= weight_sum;
+			}
 
-				tfs.push_back(trans_res);
+			//compute the new transformation
+			for (int k = 0; k < neighbors.size(); k++){
+				unsigned int index = neighbors[k];
+				trans_res.tx += weights[k] * ctfs[index].tx;
+				trans_res.ty += weights[k] * ctfs[index].ty;
+				trans_res.tz += weights[k] * ctfs[index].tz;
+				trans_res.ry += weights[k] * ctfs[index].ry;
+				trans_res.rz += weights[k] * ctfs[index].rz;
+				trans_res.rx += weights[k] * ctfs[index].rx;
+			}
+
+			tfs.push_back(trans_res);
+		}
+
+		kd_eth.begin();
+		free(pointSet);
+		pointSet = NULL;
+
+		if (useControlPoints){
+			//transform control points
+			for (int i = 0; i < cpoints.size(); i++){
+				std::vector<float> rot, trans;
+				Transformation2RotTrans(ctfs[i], rot, trans);
+				cpoints[i] = TransformPoint(rot, trans, cpoints[i]);
+				cnormals[i] = TransformNormal(rot, cnormals[i]);
 			}
 		}
-	}
-	else{
-		for (int i = 0; i <  cpoints.size(); i++){
-			tfs.push_back(ctfs[i]);
-		}
-	}
 }
 
 void ITMMotionAnalysis::Transformation2Matrix4(const Transformation &tf, Matrix4f &mtf){
@@ -264,11 +276,11 @@ void ITMMotionAnalysis::getNeighboorsOfEachNode(const std::vector<Vector3f> &cpo
 	kd_eth.add_vertex_set(pointSet, cpoints.size());
 	kd_eth.end();
 
-	std::vector<unsigned int> neighbors;
 	for (int i = 0; i < cpoints.size(); i++){
 		Vector3f p = cpoints[i];
 
 		//get neighbor points within a range of radius
+		std::vector<unsigned int> neighbors;
 		kd_eth.find_points_in_radius(p, radius, neighbors);
 		neighbor.push_back(neighbors);
 	}
