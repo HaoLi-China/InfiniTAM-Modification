@@ -28,6 +28,9 @@ public:
 		const Vector3f& p, unsigned int k, std::vector<unsigned int>& neighbor_indices
 		) const;
 	void find_closest_K_points(
+		const Vector3f& p, unsigned int k, std::vector<unsigned int>& neighbor_indices, std::vector<double>& squared_distances
+		) const;
+	void find_closest_K_points(
 		const Vector3f& p, unsigned int k,
 		std::vector<Vector3f>& neighbors, std::vector<double>& squared_distances
 		) const ;

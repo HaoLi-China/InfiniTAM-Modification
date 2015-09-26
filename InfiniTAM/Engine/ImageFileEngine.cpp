@@ -27,7 +27,7 @@ ImageFileEngine::ImageFileEngine(const char *calibFilename, const char *depthDat
 	imageSize_rgb = Vector2i(640, 360);
 
 	nDepthMinReliableDistance = 500;
-	//nDepthMaxDistance = USHRT_MAX;
+	nDepthMaxDistance = USHRT_MAX;
 	nDepthMaxDistance = 1800;
 
 	this->calib.intrinsics_d.SetFrom(366.685, 366.685, 256.52, 208.1, 640, 480);

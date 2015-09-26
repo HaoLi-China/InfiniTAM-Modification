@@ -119,6 +119,7 @@ void ITMMainEngine::SaveSceneToMesh(const char *objFileName)
 //Hao modified it
 void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage, ITMIMUMeasurement *imuMeasurement)
 {
+	std::cout << "new Frame" << std::endl;
 	// prepare image and turn it into a depth image
 	if (imuMeasurement == NULL) viewBuilder->UpdateView(&view, rgbImage, rawDepthImage, settings->useBilateralFilter, settings->modelSensorNoise);
 	else viewBuilder->UpdateView(&view, rgbImage, rawDepthImage, settings->useBilateralFilter, imuMeasurement);
@@ -137,7 +138,7 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 		std::vector<std::vector<Vector3f>> cblocks_p;
 		std::vector<std::vector<short>> cblocks_sdf;
 		std::vector<std::vector<uchar>> cblocks_w;
-		
+	
 		if (settings->useControlPoints){
 			getControlPoints(cpoints, cblocks_p, cblocks_sdf, cblocks_w, cnormals, true);
 			getAllOperationPoints(cblocks_p, cblocks_sdf, cblocks_w, points, sdf_s, w_s);
@@ -146,6 +147,7 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 			getAllOperationPoints(points, normals, sdf_s, w_s, true);
 		}
 
+		//just for debug
 		//PointsIO::savePLYfile("cpoints.ply", cpoints, cnormals);
 		//PointsIO::savePLYfile("cpoints.ply", cpoints, cnormals, Vector3u(255, 255, 255));
 
@@ -175,7 +177,7 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 	}
 	else{
 		// tracking
-		trackingController->Track(trackingState, view);
+		//trackingController->Track(trackingState, view);
 	}
 
 	// fusion
@@ -401,11 +403,14 @@ void ITMMainEngine::getControlPoints(std::vector<Vector3f> &cpoints, std::vector
 			}
 
 			if (pts0.size() > 0){
-				computeControlPoints(voxels, hashTable, hashEntry, pts0, sdf0, cpoints, cnormals, withNormals);
+				bool cPExisting;
+				computeControlPoints(voxels, hashTable, hashEntry, pts0, sdf0, cpoints, cnormals, cPExisting, withNormals);
 
-				cblocks_p.push_back(pts0);
-				cblocks_sdf.push_back(sdf0);
-				cblocks_w.push_back(w0);
+				if (cPExisting){
+					cblocks_p.push_back(pts0);
+					cblocks_sdf.push_back(sdf0);
+					cblocks_w.push_back(w0);
+				}
 			}
 		}
 	}
@@ -417,11 +422,13 @@ void ITMMainEngine::getControlPoints(std::vector<Vector3f> &cpoints, std::vector
 }
 
 //Hao added it: compute control points
-void ITMMainEngine::computeControlPoints(const ITMVoxel *voxels, const ITMHashEntry *hashTable, const ITMHashEntry &hashEntry, const std::vector<Vector3f> &relatedPoints, const std::vector<short> &sdfs, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, const bool withNormals){
+void ITMMainEngine::computeControlPoints(const ITMVoxel *voxels, const ITMHashEntry *hashTable, const ITMHashEntry &hashEntry, const std::vector<Vector3f> &relatedPoints, const std::vector<short> &sdfs, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, bool &cPExisting, const bool withNormals){
 	int a = 3;
 	int b = 3;
 	int c = 3;
 	int j = a*SDF_BLOCK_SIZE*SDF_BLOCK_SIZE + b*SDF_BLOCK_SIZE + c;
+
+	cPExisting = false;
 
 	Vector3f cenPoint;
 	float voxelSize = 0.125f;
@@ -435,7 +442,7 @@ void ITMMainEngine::computeControlPoints(const ITMVoxel *voxels, const ITMHashEn
 	cenPoint.y += scene->sceneParams->voxelSize / 2.0f;
 	cenPoint.z += scene->sceneParams->voxelSize / 2.0f;
 
-	Vector3f conPoint;
+	Vector3f conPoint(0, 0, 0);
 	double min = 1.0f;
 	for (int i = 0; i < relatedPoints.size(); i++){
 		float x = relatedPoints[i].x;
@@ -443,39 +450,42 @@ void ITMMainEngine::computeControlPoints(const ITMVoxel *voxels, const ITMHashEn
 		float z = relatedPoints[i].z;
 
 		double dis = (cenPoint.x - x)*(cenPoint.x - x) + (cenPoint.y - y)*(cenPoint.y - y) + (cenPoint.z - z)*(cenPoint.z - z);
-		if (min > abs((sdfs[i] / 32767.0f) * dis)){
+		if ((sdfs[i] / 32767.0f) <= 0.1f && (sdfs[i] / 32767.0f) >= -0.1f && min > abs((sdfs[i] / 32767.0f) * dis)){
 			min = abs((sdfs[i] / 32767.0f) * dis);
 			conPoint.x = x;
 			conPoint.y = y;
 			conPoint.z = z;
+			cPExisting = true;
 		}
 	}
 
-	if (withNormals){
-		Vector3f n;
-		Vector3f pt(conPoint.x / (blockSizeWorld*voxelSize), conPoint.y / (blockSizeWorld*voxelSize), conPoint.z / (blockSizeWorld*voxelSize));
+	if (cPExisting){
+		if (withNormals){
+			Vector3f n;
+			Vector3f pt(conPoint.x / (blockSizeWorld*voxelSize), conPoint.y / (blockSizeWorld*voxelSize), conPoint.z / (blockSizeWorld*voxelSize));
 
-		Vector3f normal_host = computeSingleNormalFromSDF(voxels, hashTable, pt);
+			Vector3f normal_host = computeSingleNormalFromSDF(voxels, hashTable, pt);
 
-		float normScale = 1.0f / sqrtf(normal_host.x * normal_host.x + normal_host.y * normal_host.y + normal_host.z * normal_host.z);
-		normal_host *= normScale;
+			float normScale = 1.0f / sqrtf(normal_host.x * normal_host.x + normal_host.y * normal_host.y + normal_host.z * normal_host.z);
+			normal_host *= normScale;
 
-		Vector3f pn(normal_host[0], normal_host[1], normal_host[2]);
-		Vector3f tem(-conPoint.x, -conPoint.y, -conPoint.z);
+			Vector3f pn(normal_host[0], normal_host[1], normal_host[2]);
+			Vector3f tem(-conPoint.x, -conPoint.y, -conPoint.z);
 
-		double dotvalue = pn.x*tem.x + pn.y*tem.y + pn.z*tem.z;
-		if (dotvalue < 0){
-			pn = -pn;
+			double dotvalue = pn.x*tem.x + pn.y*tem.y + pn.z*tem.z;
+			if (dotvalue < 0){
+				pn = -pn;
+			}
+
+			n.x = pn.x;
+			n.y = pn.y;
+			n.z = pn.z;
+
+			cnormals.push_back(n);
 		}
 
-		n.x = pn.x;
-		n.y = pn.y;
-		n.z = pn.z;
-
-		cnormals.push_back(n);
+		cpoints.push_back(conPoint);
 	}
-
-	cpoints.push_back(conPoint);
 }
 
 //Hao added it: get all operation points
@@ -703,53 +713,63 @@ void ITMMainEngine::transformVoxels(const std::vector<Vector3f> &points, const s
 void ITMMainEngine::getVisibleControlPoints(const std::vector<Vector3f> &cpoints, std::vector<bool> &visiblelist){
 	visiblelist.clear();
 
+	bool *entriesCPFlag = (bool*)malloc((SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE) * sizeof(bool));
+	memset(entriesCPFlag, 0, (SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE) * sizeof(bool));
+
 	ITMPointCloud *vpointCloud = new ITMPointCloud(trackedImageSize, MEMORYDEVICE_CPU);
 	Vector4f *vpoint = vpointCloud->locations->GetData(MEMORYDEVICE_CPU);
 	//Vector4f *vnormal = vpointCloud->colours->GetData(MEMORYDEVICE_CPU);
 	vpointCloud->noTotalPoints = trackedImageSize.x * trackedImageSize.y;
+
+	ORUtils::MemoryBlock<ITMHashEntry> *hashEntries = new ORUtils::MemoryBlock<ITMHashEntry>(SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE, MEMORYDEVICE_CPU);
+	ITMHashEntry *hashTable = hashEntries->GetData(MEMORYDEVICE_CPU);
 
 	bool flag = false;
 #ifndef COMPILE_WITHOUT_CUDA
 	flag = true;
 #endif
 	if (flag){
+		ITMSafeCall(cudaMemcpy(hashTable, scene->index.GetEntries(), (SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE)*sizeof(ITMHashEntry), cudaMemcpyDeviceToHost));
 		ITMSafeCall(cudaMemcpy(vpoint, trackingState->pointCloud->locations->GetData(MEMORYDEVICE_CUDA), trackedImageSize.x * trackedImageSize.y * sizeof(Vector4f), cudaMemcpyDeviceToHost));
 		//ITMSafeCall(cudaMemcpy(vnormal, trackingState->pointCloud->colours->GetData(MEMORYDEVICE_CUDA), trackedImageSize.x * trackedImageSize.y * sizeof(Vector4f), cudaMemcpyDeviceToHost));
 	}
 	else{
+		memcpy(hashTable, scene->index.GetEntries(), (SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE)*sizeof(ITMHashEntry));
 		memcpy(vpoint, trackingState->pointCloud->locations->GetData(MEMORYDEVICE_CUDA), trackedImageSize.x * trackedImageSize.y * sizeof(Vector4f));
 		//memcpy(vnormal, trackingState->pointCloud->colours->GetData(MEMORYDEVICE_CUDA), trackedImageSize.x * trackedImageSize.y * sizeof(Vector4f));
 	}
+
+	float blockSizeWorld = scene->sceneParams->voxelSize*SDF_BLOCK_SIZE; // = 0.005*8;
 
 	std::vector<Vector3f> vpts;
 	for (int i = 0; i < trackedImageSize.x*trackedImageSize.y; i++){
 		if (vpoint[i].w > 0){
 			Vector3f pt(vpoint[i].x, vpoint[i].y, vpoint[i].z);
-			vpts.push_back(pt);
+			
+			Vector3s blockPos;
+			blockPos.x = floor(pt.x / blockSizeWorld);
+			blockPos.y = floor(pt.y / blockSizeWorld);
+			blockPos.z = floor(pt.z / blockSizeWorld);
+
+			int res = FindVBIndex(blockPos, hashTable);
+
+			if (res!=-1){
+				entriesCPFlag[res] = true;
+			}
 		}
 	}
 
-	Vector3f *pointSet = (Vector3f*)malloc((vpts.size())*sizeof(Vector3f));
-	for (int i = 0; i < vpts.size(); i++){
-		pointSet[i].x = vpts[i].x;
-		pointSet[i].y = vpts[i].y;
-		pointSet[i].z = vpts[i].z;
-	}
-
-	KdTreeSearch_ETH kd_eth;
-	kd_eth.add_vertex_set(pointSet, vpts.size());
-	kd_eth.end();
-
-	float voxelSize = 0.005f;
-	std::vector<unsigned int> neighbors;
 	for (int i = 0; i < cpoints.size(); i++){
 		Vector3f p = cpoints[i];
-		std::vector<Vector3f> neighbors;
-		std::vector<double> squared_distances;
-		//get neighbor points within a range of radius
-		kd_eth.find_closest_K_points(p, 1, neighbors, squared_distances);
 
-		if (sqrt(squared_distances[0]) < voxelSize * 2){
+		Vector3s blockPos;
+		blockPos.x = floor(p.x / blockSizeWorld);
+		blockPos.y = floor(p.y / blockSizeWorld);
+		blockPos.z = floor(p.z / blockSizeWorld);
+
+		int res = FindVBIndex(blockPos, hashTable);
+
+		if (res != -1 && entriesCPFlag[res]){
 			visiblelist.push_back(true);
 		}
 		else{
@@ -757,48 +777,14 @@ void ITMMainEngine::getVisibleControlPoints(const std::vector<Vector3f> &cpoints
 		}
 	}
 
-	kd_eth.begin();
-	free(pointSet);
-	pointSet = NULL;
-
-	//KDtree tree;
-	//CUDA_KDTree GPU_tree;
-	//int max_tree_levels = 13; // play around with this value to get the best result
-
-	//vector<KDPoint> data(vpts.size());
-	//vector<KDPoint> queries(cpoints.size());
-
-	//for (int i = 0; i < vpts.size(); i++){
-	//	data[i].coords[0] = vpts[i].x;
-	//	data[i].coords[1] = vpts[i].y;
-	//	data[i].coords[2] = vpts[i].z;
-	//}
-	//
-	//for (int i = 0; i < cpoints.size(); i++){
-	//	queries[i].coords[0] = cpoints[i].x;
-	//	queries[i].coords[1] = cpoints[i].y;
-	//	queries[i].coords[2] = cpoints[i].z;
-	//}
-
-	//vector <int> gpu_indexes;
-	//vector <float> gpu_dists;
-
-	//tree.Create(data, max_tree_levels);
-	//GPU_tree.CreateKDTree(tree.GetRoot(), tree.GetNumNodes(), data);
-	//GPU_tree.Search(queries, gpu_indexes, gpu_dists);
-
-
-	//for (int i = 0; i < cpoints.size(); i++){
-	//	if (gpu_dists[i] < voxelSize*2){
-	//		visiblelist[i] = true;
-	//	}
-	//	else{
-	//		visiblelist[i] = false;
-	//	}
-	//}
-
 	delete vpointCloud;
 	vpointCloud = NULL;
+
+	free(entriesCPFlag);
+	entriesCPFlag = NULL;
+
+	free(hashTable);
+	hashTable = NULL;
 }
 
 //Hao added it: Get Visible Points
@@ -854,10 +840,10 @@ void ITMMainEngine::getVisiblePoints(const std::vector<Vector3f> &points, std::v
 		kd_eth.find_closest_K_points(p, 1, neighbors, squared_distances);
 
 		if (sqrt(squared_distances[0]) < voxelSize){
-			visiblelist.push_back(true);
+			visiblelist[i] = true;
 		}
 		else{
-			visiblelist.push_back(false);
+			visiblelist[i] = false;
 		}
 	}
 

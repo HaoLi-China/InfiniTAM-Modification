@@ -57,15 +57,24 @@ MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, ITMFloatImage *newDe
 		}
 	}
 
+	//just for debug
 	//PointsIO::savePLYfile("vpoints.ply", vpoints, vnormals);
 	//PointsIO::savePLYfile("vpoints.ply", vpoints, vnormals, Vector3u(255, 0, 0));
 
 	//updatePointsNormals();
-	float *depth = newDepthImage->GetData(MEMORYDEVICE_CPU);
+	float *depth_device = newDepthImage->GetData(MEMORYDEVICE_CUDA);
+	float *depth = (float*)malloc(depth_image_width*depth_image_height * sizeof(float));
+	ITMSafeCall(cudaMemcpy(depth, depth_device, (depth_image_width * depth_image_height)*sizeof(float), cudaMemcpyDeviceToHost));
+
 	computeDpoints(depth);
 
+	free(depth);
+	depth = NULL;
+
+	//just for debug
 	//std::vector<Vector3f> dnormals;
 	//PointsIO::savePLYfile("dpoints.ply", dpoints, dnormals, Vector3u(0, 0, 255));
+
 	int valid_dpoints_num = 0;
 	for (int i = 0; i < dpoints.size(); i++){
 		if (dpoints[i].z != -1){
@@ -105,9 +114,16 @@ MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, ITMFloatImage *newDe
 	for (int i = 0; i < points.size(); i++){
 		Vector3f p = points[i];
 		//get neighbor points within a range of radius(0.04m)
-		kd_eth1.find_points_in_radius(p, 0.0016, neighbors);
+		//kd_eth1.find_points_in_radius(p, 0.0016, neighbors);
+		std::vector<double> squared_distances;
+		kd_eth1.find_closest_K_points(p, 3, neighbors, squared_distances);
 
-		if (neighbors.size()==0){
+		double sum_dis = 0;
+		for (int j = 0; j < squared_distances.size(); j++){
+			sum_dis += squared_distances[j];
+		}
+
+		if (sum_dis > 0.03){
 			livelist.push_back(false);
 			kd_eth2.find_closest_K_points(p, 4, neighbors);
 		}
@@ -157,6 +173,20 @@ void MotionsData::updateAllWarpInfo(const std::vector<double>& x)
 		tfs[i].rx = (float)x[6 * i + 5];
 	}
 	malys->setAllTransformations(tfs);
+
+	std::vector<Vector3f> trans_points;
+	//just for debug
+	//for (int i = 0; i < points.size(); i++){
+	//	std::vector<float> rot;
+	//	std::vector<float> trans;
+	//	malys->Transformation2RotTrans(tfs[i], rot, trans);
+	//	Vector3f pt_tem = malys->TransformPoint(rot, trans, points[i]);
+
+	//	trans_points.push_back(pt_tem);
+	//}
+
+	//std::vector<Vector3f> tnormals;
+	//PointsIO::savePLYfile("tpoints.ply", trans_points, tnormals, Vector3u(0, 255, 0));
 }
 
 void MotionsData::updatePointsNormals()
@@ -194,6 +224,22 @@ void MotionsData::computeDpoints(float *depth)
 	malys->getCalib(calib);
 
 	Vector4f projParams_d = calib->intrinsics_d.projectionParamsSimple.all;
+
+	//just for debug
+	//std::vector<Vector3f> dpc;
+	//for (int i = 0; i < depth_image_height; i++){
+	//	for (int j = 0; j < depth_image_width; j++){
+	//		Vector3f dpt;
+	//		dpt.z = depth[j + i * depth_image_width];
+	//		if (dpt.z != -1){
+	//			dpt.x = dpt.z * ((float(j) - projParams_d.z) / projParams_d.x);
+	//			dpt.y = dpt.z * ((float(i) - projParams_d.w) / projParams_d.y);
+	//			dpc.push_back(dpt);
+	//		}
+	//	}
+	//}
+	//std::vector<Vector3f> dnormals;
+	//PointsIO::savePLYfile("dpc.ply", dpc, dnormals, Vector3u(255, 255, 255));
 
 	for (int i = 0; i < vpoints.size(); i++){
 		Vector4f vpt = vpoints[i];

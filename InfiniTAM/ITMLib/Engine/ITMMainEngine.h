@@ -132,7 +132,7 @@ namespace ITMLib
 			void getAllOperationPoints(const std::vector<std::vector<Vector3f>> &cblocks_p, const std::vector<std::vector<short>> &cblocks_sdf, const std::vector<std::vector<uchar>> &cblocks_w, std::vector<Vector3f> &points, std::vector<short> &sdf_s, std::vector<uchar> &w_s);//Hao added it
 			void transformVoxels(const std::vector<Vector3f> &points, const std::vector<short> &sdf_s, const std::vector<uchar> &w_s, const std::vector<Transformation> &tfs);//Hao added it
 			void resetAllVoxels();//Hao added it
-			void computeControlPoints(const ITMVoxel *voxels, const ITMHashEntry *hashTable, const ITMHashEntry &hashEntry, const std::vector<Vector3f> &relatedPoints, const std::vector<short> &sdfs, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, const bool withNormals);
+			void computeControlPoints(const ITMVoxel *voxels, const ITMHashEntry *hashTable, const ITMHashEntry &hashEntry, const std::vector<Vector3f> &relatedPoints, const std::vector<short> &sdfs, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, bool &cPExisting, const bool withNormals);
 			void getVisiblePoints(const std::vector<Vector3f> &points, std::vector<bool> &visiblelist);//Hao added it
 			void getAllSurfacePoints(std::vector<Vector3f> &points, std::vector<Vector3f> &normals, const bool withNormals = false);//Hao added it
 			void saveSurfacePoints(const std::string &filename);//Hao added it

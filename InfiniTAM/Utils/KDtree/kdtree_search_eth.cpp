@@ -133,7 +133,25 @@ void KdTreeSearch_ETH::find_closest_K_points(
 			std::cerr << "less than " << k << " points found" << std::endl;
 }
 
+void KdTreeSearch_ETH::find_closest_K_points(
+	const Vector3f& p, unsigned int k, std::vector<unsigned int>& neighbor_indices, std::vector<double>& squared_distances
+	) const{
+	kdtree::Vector3D v3d(p.x, p.y, p.z);
+	get_tree(tree_)->setNOfNeighbours(k);
+	get_tree(tree_)->queryPosition(v3d);
 
+	unsigned int num = get_tree(tree_)->getNOfFoundNeighbours();
+	if (num == k) {
+		neighbor_indices.resize(k);
+		squared_distances.resize(k);
+		for (unsigned int i = 0; i < k; ++i) {
+			neighbor_indices[i] = get_tree(tree_)->getNeighbourPositionIndex(i);
+			squared_distances[i] = get_tree(tree_)->getSquaredDistance(i);
+		}
+	}
+	else
+		std::cerr << "less than " << k << " points found" << std::endl;
+}
 
 void KdTreeSearch_ETH::find_points_in_radius(
 	const Vector3f& p, double squared_radius, std::vector<Vector3f>& neighbors
