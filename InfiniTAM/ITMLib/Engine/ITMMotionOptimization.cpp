@@ -598,6 +598,9 @@ double motions_function(const std::vector<double> &x, std::vector<double> &grad,
 		double dot1 = mni.x * delta_mvi_dvi.x + mni.y * delta_mvi_dvi.y + mni.z * delta_mvi_dvi.z;
 		f += dot1 * dot1;
 
+		// point-point term
+		f += delta_mvi_dvi.norm2();
+
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// gradient 
 		// 2 * (ni.(vi - vi'))
@@ -653,6 +656,22 @@ double motions_function(const std::vector<double> &x, std::vector<double> &grad,
 		grad[i * 6 + 5] += mni.z * ((shi * sai * cbi_ + chi * cbi_) * vi.y + (-shi * sai * sbi_ + chi * cbi_) * vi.z);
 		// 2 * (ni.(vi - vi')) * ((mtf * ni) . (mtf * vi) - (mtf * ni) . dvi)'rx
 		grad[i * 6 + 5] *= dot2;
+
+		// point-point term
+		grad[i * 6] += 2.0f * (mvi.x - dvi.x);
+		grad[i * 6 + 1] += 2.0f * (mvi.y - dvi.y);
+		grad[i * 6 + 2] += 2.0f * (mvi.z - dvi.z);
+
+		grad[i * 6 + 3] += 2.0f * (mvi.x - dvi.x)*(chi_*cai*mvi.x + (shi_*sbi - chi_*sai*cbi)*mvi.y + (chi_*sai*sbi + shi_*cbi)*mvi.z);
+		grad[i * 6 + 3] += 2.0f * (mvi.z - dvi.z)*(-shi_*cai*mvi.x + (shi_*sai*cbi + chi_*sbi)*mvi.y + (-shi_*sai*sbi + chi_*cbi)*mvi.z);
+
+		grad[i * 6 + 4] += 2.0f * (mvi.x - dvi.x)*(chi*cai_*mvi.x + (-chi*sai_*cbi)*mvi.y + (chi*sai_*sbi)*mvi.z);
+		grad[i * 6 + 4] += 2.0f * (mvi.y - dvi.y)*(sai_*mvi.x + (cai_*cbi)*mvi.y + (-cai_*sbi)*mvi.z);
+		grad[i * 6 + 4] += 2.0f * (mvi.z - dvi.z)*(-shi*cai_*mvi.x + (shi*sai_*cbi)*mvi.y + (-shi*sai_*sbi)*mvi.z);
+
+		grad[i * 6 + 5] += 2.0f * (mvi.x - dvi.x)*((shi*sbi_ - chi*sai*cbi_)*mvi.y + (chi*sai*sbi_ + shi*cbi_)*mvi.z);
+		grad[i * 6 + 5] += 2.0f * (mvi.y - dvi.y)*((cai*cbi_)*mvi.y + (-cai*sbi_)*mvi.z);
+		grad[i * 6 + 5] += 2.0f * (mvi.z - dvi.z)*((shi*sai*cbi_ + chi*sbi_)*mvi.y + (-shi*sai*sbi_ + chi*cbi_)*mvi.z);
 	}
 
 	// reg term
