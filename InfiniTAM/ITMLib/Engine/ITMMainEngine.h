@@ -143,6 +143,8 @@ namespace ITMLib
 			const float CP_RESOLUTION = 0.04;//Hao added it
 			std::vector<Vector3f> cpoints;
 			std::vector<Vector3f> cnormals;
+			std::vector<std::vector<Vector3f>> cpoints_vec;
+			std::vector<Vector3f> color_vec;
 
 			/** \brief Constructor
 			    Ommitting a separate image size for the depth images

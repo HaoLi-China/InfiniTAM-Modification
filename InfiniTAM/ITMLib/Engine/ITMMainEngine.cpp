@@ -149,8 +149,14 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 		//just for debug
 		//PointsIO::savePLYfile("cpoints.ply", cpoints, cnormals);
 		//PointsIO::savePLYfile("cpoints.ply", cpoints, cnormals, Vector3u(255, 255, 255));
-
 		if (settings->useControlPoints && cpoints.size() > 0){
+			cpoints_vec.push_back(cpoints);
+			Vector3f color;
+			color[0] = rand()*1.0f / float(RAND_MAX);
+			color[1] = rand()*1.0f / float(RAND_MAX);
+			color[2] = rand()*1.0f / float(RAND_MAX);
+			color_vec.push_back(color);
+
 			getVisibleControlPoints(cpoints, visiblelist);
 			motionAnalysis->initialize(cpoints, cnormals, visiblelist);
 			////motionAnalysis->optimizeEnergyFunction(view->depth);

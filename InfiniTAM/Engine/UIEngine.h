@@ -44,9 +44,13 @@ namespace InfiniTAM
 			StopWatchInterface *timer_average;
 
 		private: // For UI layout
+			static const int NUM_SUB_WIN = 2;
+			int subwin[NUM_SUB_WIN];
 			static const int NUM_WIN = 3;
 			Vector4f winReg[NUM_WIN]; // (x1, y1, x2, y2)
-			Vector2i winSize;
+			Vector2i mainWinSize;
+			Vector2i subWin1Size;
+			Vector2i subWin2Size;
 			uint textureId[NUM_WIN];
 			ITMUChar4Image *outImage[NUM_WIN];
 			ITMMainEngine::GetImageType outImageType[NUM_WIN];
@@ -63,6 +67,22 @@ namespace InfiniTAM
 			Vector2i mouseLastClick;
 
 			int currentFrameNo; bool isRecording;
+
+			float thetaX;
+			float thetaY;
+			float scaleFactor;
+
+			float dx;
+			float dy;
+			float oldy;
+			float oldx;
+
+			float centerX;
+			float centerY;
+			float centerZ;
+
+			bool isRotating;
+			bool isTranslating;
 		public:
 			static UIEngine* Instance(void) {
 				if (instance == NULL) instance = new UIEngine();
@@ -70,14 +90,19 @@ namespace InfiniTAM
 			}
 
 			static void glutDisplayFunction();
+			static void glutDisplayTrajectoryFunction();
 			static void glutIdleFunction();
 			static void glutKeyUpFunction(unsigned char key, int x, int y);
 			static void glutMouseButtonFunction(int button, int state, int x, int y);
 			static void glutMouseMoveFunction(int x, int y);
 			static void glutMouseWheelFunction(int button, int dir, int x, int y);
+			static void glutReshapeTrajectoryView(int width, int height);
+			static void glutTrajectoryViewMouseClick(int button, int state, int x, int y);
+			static void glutTrajectoryViewMouseMove(int x, int y);
+			static void glutTrajectoryViewMouseWheel(int button, int dir, int x, int y);
 
 			const Vector2i & getWindowSize(void) const
-			{ return winSize; }
+			{ return mainWinSize; }
 
 			float processedTime;
 			int processedFrameNo;

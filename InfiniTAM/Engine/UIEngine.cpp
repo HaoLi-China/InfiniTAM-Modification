@@ -36,6 +36,8 @@ void UIEngine::glutDisplayFunction()
 {
 	UIEngine *uiEngine = UIEngine::Instance();
 
+	glutSetWindow(uiEngine->subwin[0]);
+
 	// get updated images from processing thread
 	uiEngine->mainEngine->GetImage(uiEngine->outImage[0], uiEngine->outImageType[0], &uiEngine->freeviewPose, &uiEngine->freeviewIntrinsics);
 
@@ -99,6 +101,96 @@ void UIEngine::glutDisplayFunction()
 	uiEngine->needsRefresh = false;
 }
 
+void UIEngine::glutDisplayTrajectoryFunction()
+{
+	UIEngine *uiEngine = UIEngine::Instance();
+
+	glutSetWindow(uiEngine->subwin[1]);
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	if (uiEngine->thetaY < 0){
+		uiEngine->thetaY = uiEngine->thetaY + 360;
+	}
+	if (uiEngine->thetaY > 360){
+		uiEngine->thetaY = uiEngine->thetaY - 360;
+	}
+	if (uiEngine->thetaX < 0){
+		uiEngine->thetaX = uiEngine->thetaX + 360;
+	}
+	if (uiEngine->thetaX > 360){
+		uiEngine->thetaX = uiEngine->thetaX - 360;
+	}
+
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+	glRotatef(uiEngine->thetaY, 0, 1, 0);
+	glRotatef(uiEngine->thetaX, 1, 0, 0);
+	glScalef(uiEngine->scaleFactor, uiEngine->scaleFactor, uiEngine->scaleFactor);
+	glTranslatef(-uiEngine->centerX, -uiEngine->centerY, -uiEngine->centerZ);
+	
+	gluLookAt(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f);
+
+	glPointSize(2.0f);
+	glBegin(GL_POINTS);
+	for (int i = 0; i < uiEngine->mainEngine->cpoints_vec.size(); i++){
+		std::vector<Vector3f> cpoints = uiEngine->mainEngine->cpoints_vec[i];
+		Vector3f color = uiEngine->mainEngine->color_vec[i];
+
+		glColor3f(color[0], color[1], color[2]);
+		for (int j = 0; j < cpoints.size(); j++){
+			glVertex3f(cpoints[j].x, cpoints[j].y, cpoints[j].z);
+		}
+	}
+
+	glEnd();
+
+	glLineWidth(1.0);
+	for (int i = 0; i < (int)(uiEngine->mainEngine->cpoints_vec.size()) - 1; i++){
+		std::vector<Vector3f> cpoints1 = uiEngine->mainEngine->cpoints_vec[i];
+        std::vector<Vector3f> cpoints2 = uiEngine->mainEngine->cpoints_vec[i+1];
+		Vector3f color = uiEngine->mainEngine->color_vec[i];
+
+		glColor3f(color[0], color[1], color[2]);
+		for (int j = 0; j < cpoints1.size(); j++){
+			glBegin(GL_LINES);
+			glVertex3f(cpoints1[j].x, cpoints1[j].y, cpoints1[j].z);
+			glVertex3f(cpoints2[j].x, cpoints2[j].y, cpoints2[j].z);
+			glEnd();
+		}
+	}
+
+	glPopMatrix();
+
+	glutSwapBuffers();
+
+	uiEngine->needsRefresh = false;
+}
+
+//reshape
+void UIEngine::glutReshapeTrajectoryView(int width, int height)
+{
+	UIEngine *uiEngine = UIEngine::Instance();
+
+	glutSetWindow(uiEngine->subwin[1]);
+
+	glViewport(0, 0, (GLsizei)width, (GLsizei)height);
+	/*if (width <= height)
+		glViewport(0, 0, (GLsizei)width, (GLsizei)width);
+		else
+		glViewport(0, 0, (GLsizei)height, (GLsizei)height);*/
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+
+	if (width <= height)
+		glOrtho(-8, 8, -8 * (GLfloat)height / (GLfloat)width, 8 * (GLfloat)height / (GLfloat)width, -100.0, 100.0);
+	else
+		glOrtho(-8 * (GLfloat)width / (GLfloat)height, 8 * (GLfloat)width / (GLfloat)height, -8, 8, -100.0, 100.0);
+	//glOrtho(-8, 8, -8, 8, -28, 28);
+}
+
 void UIEngine::glutIdleFunction()
 {
 	UIEngine *uiEngine = UIEngine::Instance();
@@ -143,7 +235,9 @@ void UIEngine::glutIdleFunction()
 	}
 
 	if (uiEngine->needsRefresh) {
-		glutPostRedisplay();
+		//glutPostRedisplay();
+		uiEngine->glutDisplayFunction();
+		uiEngine->glutDisplayTrajectoryFunction();
 	}
 }
 
@@ -221,6 +315,8 @@ void UIEngine::glutMouseButtonFunction(int button, int state, int x, int y)
 {
 	UIEngine *uiEngine = UIEngine::Instance();
 
+	glutSetWindow(uiEngine->subwin[0]);
+
 	if (state == GLUT_DOWN)
 	{
 		switch (button)
@@ -265,6 +361,8 @@ static inline Matrix3f createRotation(const Vector3f & _axis, float angle)
 void UIEngine::glutMouseMoveFunction(int x, int y)
 {
 	UIEngine *uiEngine = UIEngine::Instance();
+
+	glutSetWindow(uiEngine->subwin[0]);
 
 	if (!uiEngine->freeviewActive) return;
 
@@ -314,15 +412,101 @@ void UIEngine::glutMouseWheelFunction(int button, int dir, int x, int y)
 {
 	UIEngine *uiEngine = UIEngine::Instance();
 
+	glutSetWindow(uiEngine->subwin[0]);
+
 	static const float scale_translation = 0.05f;
 
 	uiEngine->freeviewPose.SetT(uiEngine->freeviewPose.GetT() + scale_translation * Vector3f(0.0f, 0.0f, (dir > 0) ? -1.0f : 1.0f));
 	uiEngine->needsRefresh = true;
 }
 
+//do when mouse clicks
+void UIEngine::glutTrajectoryViewMouseClick(int button, int state, int x, int y)
+{
+	UIEngine *uiEngine = UIEngine::Instance();
+	glutSetWindow(uiEngine->subwin[1]);
+
+	if (state == GLUT_DOWN && button == GLUT_LEFT_BUTTON){
+		uiEngine->isRotating = true;
+		uiEngine->oldx = x, uiEngine->oldy = y;
+	}
+	if (state == GLUT_UP && button == GLUT_LEFT_BUTTON){
+		uiEngine->isRotating = false;
+	}
+	if (state == GLUT_DOWN && button == GLUT_RIGHT_BUTTON)
+	{
+		uiEngine->isTranslating = true;
+		uiEngine->oldx = x, uiEngine->oldy = y;
+	}
+	if (state == GLUT_UP && button == GLUT_RIGHT_BUTTON)
+	{
+		uiEngine->isTranslating = false;
+	}
+	if (state == GLUT_DOWN && button == GLUT_MIDDLE_BUTTON)
+	{
+		uiEngine->scaleFactor *= 1.2f;
+		glutPostRedisplay();
+	}
+}
+
+void UIEngine::glutTrajectoryViewMouseWheel(int button, int dir, int x, int y)
+{
+	UIEngine *uiEngine = UIEngine::Instance();
+	glutSetWindow(uiEngine->subwin[1]);
+
+	if (dir == 1)
+	{
+		uiEngine->scaleFactor += 0.03;
+		glutPostRedisplay();
+	}
+	if (dir == -1)
+	{
+		uiEngine->scaleFactor -= 0.03;
+		glutPostRedisplay();
+	}
+}
+
+//do when mouse moves
+void UIEngine::glutTrajectoryViewMouseMove(int x, int y)
+{
+	UIEngine *uiEngine = UIEngine::Instance();
+	glutSetWindow(uiEngine->subwin[1]);
+	
+	if (uiEngine->isRotating){
+		uiEngine->dx += (x - uiEngine->oldx);
+		uiEngine->dy += (y - uiEngine->oldy);
+		uiEngine->thetaX = uiEngine->dy / uiEngine->subWin2Size.y * 90;
+		uiEngine->thetaY = uiEngine->dx / uiEngine->subWin2Size.x * 90;
+		uiEngine->oldx = x, uiEngine->oldy = y;
+		glutPostRedisplay();
+	}
+	if (uiEngine->isTranslating){
+		uiEngine->centerX -= ((x - uiEngine->oldx) / uiEngine->subWin2Size.x);
+		uiEngine->centerY += ((y - uiEngine->oldy) / uiEngine->subWin2Size.y);
+		uiEngine->oldx = x, uiEngine->oldy = y;
+		glutPostRedisplay();
+	}
+}
+
 void UIEngine::Initialise(int & argc, char** argv, ImageSourceEngine *imageSource, IMUSourceEngine *imuSource, ITMMainEngine *mainEngine,
 	const char *outFolder, ITMLibSettings::DeviceType deviceType)
 {
+	thetaX = 0.0;
+	thetaY = 0.0;
+	scaleFactor = 1.0;
+
+	dx = 0;
+	dy = 0;
+	oldy = -1;
+	oldx = -1;
+
+	centerX = 0;
+	centerY = 0;
+	centerZ = 0;
+
+	isRotating = false;
+	isTranslating = false;
+
 	this->freeviewActive = false;
 	this->intergrationActive = true;
 	this->currentColourMode = 0;
@@ -353,32 +537,46 @@ void UIEngine::Initialise(int & argc, char** argv, ImageSourceEngine *imageSourc
 	int textHeight = 30; // Height of text area
 	//winSize.x = (int)(1.5f * (float)MAX(imageSource->getImageSize().x, imageSource->getDepthImageSize().x));
 	//winSize.y = MAX(imageSource->getRGBImageSize().y, imageSource->getDepthImageSize().y) + textHeight;
-	winSize.x = (int)(1.5f * (float)(imageSource->getDepthImageSize().x));
-	winSize.y = imageSource->getDepthImageSize().y + textHeight;
-	float h1 = textHeight / (float)winSize.y, h2 = (1.f + h1) / 2;
+	subWin1Size.x = (int)(1.5f * (float)(imageSource->getDepthImageSize().x));
+	subWin1Size.y = imageSource->getDepthImageSize().y + textHeight;
+	float h1 = textHeight / (float)subWin1Size.y, h2 = (1.f + h1) / 2;
 	winReg[0] = Vector4f(0.0f, h1, 0.665f, 1.0f);   // Main render
 	winReg[1] = Vector4f(0.665f, h2, 1.0f, 1.0f);   // Side sub window 0
 	winReg[2] = Vector4f(0.665f, h1, 1.0f, h2);     // Side sub window 2
 
-	this->isRecording = true;
+	subWin2Size = subWin1Size;
+	mainWinSize.x = subWin1Size.x;
+	mainWinSize.y = subWin1Size.y + subWin2Size.y;
+
+	this->isRecording = false;
 	this->currentFrameNo = 0;
 
 	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
-	glutInitWindowSize(winSize.x, winSize.y);
-	glutCreateWindow("InfiniTAM");
-	glGenTextures(NUM_WIN, textureId);
+	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
+	glutInitWindowPosition(100, 100);
+	glutInitWindowSize(mainWinSize.x, mainWinSize.y);
+	int mainWindow = glutCreateWindow("InfiniTAM");
 
-	glutDisplayFunc(UIEngine::glutDisplayFunction);
+	glGenTextures(NUM_WIN, textureId);
 	glutKeyboardUpFunc(UIEngine::glutKeyUpFunction);
+	glutIdleFunc(UIEngine::glutIdleFunction);
+
+	subwin[0] = glutCreateSubWindow(mainWindow, 0, 0, subWin1Size.x, subWin1Size.y);
+	glutDisplayFunc(UIEngine::glutDisplayFunction);
 	glutMouseFunc(UIEngine::glutMouseButtonFunction);
 	glutMotionFunc(UIEngine::glutMouseMoveFunction);
-	glutIdleFunc(UIEngine::glutIdleFunction);
 
 #ifdef FREEGLUT
 	glutMouseWheelFunc(UIEngine::glutMouseWheelFunction);
 	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, 1);
 #endif
+
+	subwin[1] = glutCreateSubWindow(mainWindow, 0, subWin1Size.y, subWin2Size.x, subWin2Size.y);
+	glutDisplayFunc(UIEngine::glutDisplayTrajectoryFunction);
+	glutReshapeFunc(UIEngine::glutReshapeTrajectoryView);
+	//glutMouseWheelFunc(UIEngine::glutTrajectoryViewMouseWheel);
+	glutMouseFunc(UIEngine::glutTrajectoryViewMouseClick);
+	glutMotionFunc(UIEngine::glutTrajectoryViewMouseMove);
 
 	bool allocateGPU = false;
 	if (deviceType == ITMLibSettings::DEVICE_CUDA) allocateGPU = true;
@@ -395,7 +593,7 @@ void UIEngine::Initialise(int & argc, char** argv, ImageSourceEngine *imageSourc
 	outImageType[0] = ITMMainEngine::InfiniTAM_IMAGE_SCENERAYCAST;
 	outImageType[1] = ITMMainEngine::InfiniTAM_IMAGE_ORIGINAL_DEPTH;
 	outImageType[2] = ITMMainEngine::InfiniTAM_IMAGE_ORIGINAL_RGB;
-	if (inputRGBImage->noDims == Vector2i(0,0)) outImageType[2] = ITMMainEngine::InfiniTAM_IMAGE_UNKNOWN;
+	if (inputRGBImage->noDims == Vector2i(0, 0)) outImageType[2] = ITMMainEngine::InfiniTAM_IMAGE_UNKNOWN;
 	//outImageType[3] = ITMMainEngine::InfiniTAM_IMAGE_SCENERAYCAST;
 	//outImageType[4] = ITMMainEngine::InfiniTAM_IMAGE_SCENERAYCAST;
 
@@ -429,8 +627,8 @@ void UIEngine::SaveFusionScreenshot(const char *filename) const
 	UIEngine *uiEngine = UIEngine::Instance();
 	Vector4f *winReg = uiEngine->winReg;
 	Vector2i window;
-	window.x = (int)((winReg[0][2] - winReg[0][0]) * winSize.x);
-	window.y = (int)((winReg[0][3] - winReg[0][1]) * winSize.y);
+	window.x = (int)((winReg[0][2] - winReg[0][0]) * subWin1Size.x);
+	window.y = (int)((winReg[0][3] - winReg[0][1]) * subWin1Size.y);
 
 	ITMUChar4Image screenshot(window, true, false);
 	GetFusionScreenshot(&screenshot);
@@ -492,7 +690,7 @@ void UIEngine::ProcessFrame()
 		ss2 >> snapshotname2;
 		SaveFusionScreenshot(snapshotname2.c_str());
 	}
-	
+
 	currentFrameNo++;
 }
 
