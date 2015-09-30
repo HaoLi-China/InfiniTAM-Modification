@@ -12,8 +12,8 @@ using namespace ITMLib::Engine;
 
 MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, ITMFloatImage *newDepthImage)
 {
-	alfa = 100.0f;
-	beta = 100.0f;
+	alfa = 0.0f;
+	beta = 0.0f;
 	lambda = 0.0f;
 
 	depth_image_width = newDepthImage->noDims.x;
@@ -779,21 +779,20 @@ double motions_function(const std::vector<double> &x, std::vector<double> &grad,
 void ITMMotionAnalysis::optimizeEnergyFunctionNlopt(ITMFloatImage *newDepthImage)
 {
 	MotionsData data(this, newDepthImage);
-	std::cout << "aaaaaaaa" << std::endl;
+	
 	int n = data.x0.size();
 	std::vector<double> x(n);
 	for (int i = 0; i < n; ++i) {
 		x[i] = data.x0[i];
 	}
-	std::cout << "bbbbbbbbbb" << std::endl;
+
 	nlopt::opt opt(nlopt::LD_MMA, n);
 	opt.set_min_objective(motions_function, &data);
 	opt.set_xtol_rel(1e-5);
-	std::cout << "cccccccccccc" << std::endl;
+
 	double minf;
 	nlopt::result result = opt.optimize(x, minf);
-	std::cout << "ddddddddddddddd" << std::endl;
+	
 	std::cout << "minf = " << minf << std::endl;
 	data.updateAllWarpInfo(x);
-	std::cout << "eeeeeeeeee" << std::endl;
 }

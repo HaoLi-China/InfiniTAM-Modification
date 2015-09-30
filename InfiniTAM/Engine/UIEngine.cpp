@@ -122,6 +122,10 @@ void UIEngine::glutDisplayTrajectoryFunction()
 		uiEngine->thetaX = uiEngine->thetaX - 360;
 	}
 
+	if (uiEngine->scaleFactor<0){
+		uiEngine->scaleFactor = 0;
+	}
+
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glLoadIdentity();
@@ -444,8 +448,12 @@ void UIEngine::glutTrajectoryViewMouseClick(int button, int state, int x, int y)
 	}
 	if (state == GLUT_DOWN && button == GLUT_MIDDLE_BUTTON)
 	{
-		uiEngine->scaleFactor *= 1.2f;
-		glutPostRedisplay();
+		uiEngine->isScaling = true;
+		uiEngine->oldx = x, uiEngine->oldy = y;
+	}
+	if (state == GLUT_UP && button == GLUT_MIDDLE_BUTTON)
+	{
+		uiEngine->isScaling = false;
 	}
 }
 
@@ -486,6 +494,17 @@ void UIEngine::glutTrajectoryViewMouseMove(int x, int y)
 		uiEngine->oldx = x, uiEngine->oldy = y;
 		glutPostRedisplay();
 	}
+	if (uiEngine->isScaling){
+		if ((y - uiEngine->oldy) < 0){
+			uiEngine->scaleFactor += 0.2f;
+		}
+		else if ((y - uiEngine->oldy) > 0){
+			uiEngine->scaleFactor -= 0.2f;
+		}
+
+		uiEngine->oldx = x, uiEngine->oldy = y;
+		glutPostRedisplay();
+	}
 }
 
 void UIEngine::Initialise(int & argc, char** argv, ImageSourceEngine *imageSource, IMUSourceEngine *imuSource, ITMMainEngine *mainEngine,
@@ -506,6 +525,7 @@ void UIEngine::Initialise(int & argc, char** argv, ImageSourceEngine *imageSourc
 
 	isRotating = false;
 	isTranslating = false;
+	isScaling = false;
 
 	this->freeviewActive = false;
 	this->intergrationActive = true;

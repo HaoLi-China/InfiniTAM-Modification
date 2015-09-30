@@ -83,6 +83,7 @@ namespace InfiniTAM
 
 			bool isRotating;
 			bool isTranslating;
+			bool isScaling;
 		public:
 			static UIEngine* Instance(void) {
 				if (instance == NULL) instance = new UIEngine();
