@@ -32,6 +32,10 @@ static void safe_glutBitmapString(void *font, const char *str)
 	}
 }
 
+void UIEngine::glutMainWinDisplayFunction(){
+
+}
+
 void UIEngine::glutDisplayFunction()
 {
 	UIEngine *uiEngine = UIEngine::Instance();
@@ -576,6 +580,7 @@ void UIEngine::Initialise(int & argc, char** argv, ImageSourceEngine *imageSourc
 	glutInitWindowPosition(100, 100);
 	glutInitWindowSize(mainWinSize.x, mainWinSize.y);
 	int mainWindow = glutCreateWindow("InfiniTAM");
+	glutDisplayFunc(UIEngine::glutMainWinDisplayFunction);
 
 	glGenTextures(NUM_WIN, textureId);
 	glutKeyboardUpFunc(UIEngine::glutKeyUpFunction);

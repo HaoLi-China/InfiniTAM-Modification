@@ -91,6 +91,7 @@ namespace InfiniTAM
 			}
 
 			static void glutDisplayFunction();
+			static void glutMainWinDisplayFunction();
 			static void glutDisplayTrajectoryFunction();
 			static void glutIdleFunction();
 			static void glutKeyUpFunction(unsigned char key, int x, int y);
