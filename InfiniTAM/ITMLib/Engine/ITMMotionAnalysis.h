@@ -55,6 +55,9 @@ namespace ITMLib
 			void Matrix42Transformation(const Matrix4f &mtf, Transformation &tf);
 			void getAllOperationPointsTransformation(const std::vector<Vector3f> &points, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, std::vector<Transformation> &tfs);
 
+			bool changeDpWhenIteration;
+			int findDepthPointsPolicy;
+
 		private:
 			ITMRGBDCalib *calib;
 			std::vector<Vector3f> cpoints;
@@ -69,11 +72,12 @@ namespace ITMLib
 
 		struct MotionsData
 		{
-			MotionsData(ITMMotionAnalysis *motionAnalysis, ITMFloatImage *newDepthImage);
+			MotionsData(ITMMotionAnalysis *motionAnalysis, float *depth, int depth_width, int depth_height);
 			void updatePointsNormals();  // using new warp transformations to compute the points and normals of canonical model
-			void computeDpoints(float *depth);  // compute corresponding points of depth image
+			void computeDpoints(const float *depth, const std::vector<double>& x, std::vector<Vector3f> &dps);  // compute corresponding points of depth image
 			void updateAllWarpInfo(double *x);
 			void updateAllWarpInfo(const std::vector<double>& x);
+			void findNeighborsInDepthMap(int x, int y, int scale, std::vector<Vector2i> &pos_s);
 
 			//float computeDataTerm(const lbfgsfloatval_t* x);
 			//float computeRegTerm(const lbfgsfloatval_t* x);
@@ -100,6 +104,8 @@ namespace ITMLib
 
 			int depth_image_width;
 			int depth_image_height;
+
+			float *depth;
 		};
 	}
 }

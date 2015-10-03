@@ -9,6 +9,9 @@ using namespace ITMLib::Engine;
 ITMMotionAnalysis::ITMMotionAnalysis(const ITMRGBDCalib *calib, bool useControlPoints){
 	this->calib = const_cast<ITMRGBDCalib*>(calib);
 	this->useControlPoints = useControlPoints;
+	this->changeDpWhenIteration = false;
+
+	findDepthPointsPolicy = 1;
 }
 
 ITMMotionAnalysis::~ITMMotionAnalysis(){

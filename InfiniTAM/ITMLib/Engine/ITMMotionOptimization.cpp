@@ -10,14 +10,16 @@ using namespace ITMLib::Engine;
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // motions information
 
-MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, ITMFloatImage *newDepthImage)
+MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, float *depth, int depth_width, int depth_height)
 {
 	alfa = 0.0f;
 	beta = 0.0f;
 	lambda = 0.0f;
 
-	depth_image_width = newDepthImage->noDims.x;
-	depth_image_height = newDepthImage->noDims.y;
+	this->depth_image_width = depth_width;
+	this->depth_image_height = depth_height;
+
+	this->depth = depth;
 
 	malys = motionAnalysis;
 
@@ -58,18 +60,11 @@ MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, ITMFloatImage *newDe
 	}
 
 	//just for debug
-	//PointsIO::savePLYfile("vpoints.ply", vpoints, vnormals);
-	//PointsIO::savePLYfile("vpoints.ply", vpoints, vnormals, Vector3u(255, 0, 0));
+	PointsIO::savePLYfile("vpoints.ply", vpoints, vnormals, Vector3u(255, 0, 0));
 
 	//updatePointsNormals();
-	float *depth_device = newDepthImage->GetData(MEMORYDEVICE_CUDA);
-	float *depth = (float*)malloc(depth_image_width*depth_image_height * sizeof(float));
-	ITMSafeCall(cudaMemcpy(depth, depth_device, (depth_image_width * depth_image_height)*sizeof(float), cudaMemcpyDeviceToHost));
-
-	computeDpoints(depth);
-
-	free(depth);
-	depth = NULL;
+	
+	computeDpoints(depth, x0, dpoints);
 
 	//just for debug
 	//std::vector<Vector3f> dnormals;
@@ -216,9 +211,28 @@ void MotionsData::updatePointsNormals()
 	}
 }
 
-void MotionsData::computeDpoints(float *depth)
+void MotionsData::findNeighborsInDepthMap(int x, int y, int scale, std::vector<Vector2i> &pos_s){
+	pos_s.clear();
+
+	int span = scale / 2;
+
+	if (span < 0){
+		return;
+	}
+
+	for (int i = x - span; i < x + span; i++){
+		for (int j = y - span; j < y + span; j++){
+			if (i > 0 && i < depth_image_width-1 && j > 0 && j < depth_image_height-1){
+				Vector2i position(i, j);
+				pos_s.push_back(position);
+			}
+		}
+	}
+}
+
+void MotionsData::computeDpoints(const float *depth, const std::vector<double>& x, std::vector<Vector3f> &dps)
 {
-	dpoints.clear();
+	dps.clear();
 
 	ITMRGBDCalib *calib = NULL;
 	malys->getCalib(calib);
@@ -241,28 +255,94 @@ void MotionsData::computeDpoints(float *depth)
 	//std::vector<Vector3f> dnormals;
 	//PointsIO::savePLYfile("dpc.ply", dpc, dnormals, Vector3u(255, 255, 255));
 
-	for (int i = 0; i < vpoints.size(); i++){
-		Vector4f vpt = vpoints[i];
+	if (malys->findDepthPointsPolicy == 0){
+		int index = 0;
+		for (int i = 0; i < points.size(); i++){
+			if (visibles[i] != -1){
+				Transformation tf = { x0[6 * i], x0[6 * i + 1], x0[6 * i + 2], x0[6 * i + 3], x0[6 * i + 4], x0[6 * i + 5] };
 
-		Vector2f pt_image;
-		pt_image.x = projParams_d.x * vpt.x / vpt.z + projParams_d.z;
-		pt_image.y = projParams_d.y * vpt.y / vpt.z + projParams_d.w;
+				std::vector<float> rot, trans;
+				malys->Transformation2RotTrans(tf, rot, trans);
+				Vector3f vpt = malys->TransformPoint(rot, trans, vpoints[index]);
 
-		int x = (int)(pt_image.x + 0.5f);
-		int y = (int)(pt_image.y + 0.5f);
+				Vector2f pt_image;
+				pt_image.x = projParams_d.x * vpt.x / vpt.z + projParams_d.z;
+				pt_image.y = projParams_d.y * vpt.y / vpt.z + projParams_d.w;
 
-		Vector3f dpt;
+				int x = (int)(pt_image.x + 0.5f);
+				int y = (int)(pt_image.y + 0.5f);
 
-		if (!((pt_image.x < 1) || (pt_image.x > depth_image_width - 2) || (pt_image.y < 1) || (pt_image.y > depth_image_height - 2))){
-			dpt.z = depth[x + y * depth_image_width];
-			dpt.x = dpt.z * ((float(x) - projParams_d.z) / projParams_d.x);
-			dpt.y = dpt.z * ((float(y) - projParams_d.w) / projParams_d.y);
+				Vector3f dpt;
+
+				if (!((pt_image.x < 1) || (pt_image.x > depth_image_width - 2) || (pt_image.y < 1) || (pt_image.y > depth_image_height - 2))){
+					dpt.z = depth[x + y * depth_image_width];
+					dpt.x = dpt.z * ((float(x) - projParams_d.z) / projParams_d.x);
+					dpt.y = dpt.z * ((float(y) - projParams_d.w) / projParams_d.y);
+				}
+				else{
+					dpt.z = -1;
+				}
+
+				dps.push_back(dpt);
+
+				index++;
+			}
 		}
-		else{
-			dpt.z = -1;
-		}
+	}
+	else if (malys->findDepthPointsPolicy == 1){
+		int index = 0;
+		for (int i = 0; i < points.size(); i++){
+			if (visibles[i] != -1){
+				Transformation tf = { x0[6 * i], x0[6 * i + 1], x0[6 * i + 2], x0[6 * i + 3], x0[6 * i + 4], x0[6 * i + 5] };
 
-		dpoints.push_back(dpt);
+				std::vector<float> rot, trans;
+				malys->Transformation2RotTrans(tf, rot, trans);
+				Vector3f vpt = malys->TransformPoint(rot, trans, vpoints[index]);
+
+				Vector2f pt_image;
+				pt_image.x = projParams_d.x * vpt.x / vpt.z + projParams_d.z;
+				pt_image.y = projParams_d.y * vpt.y / vpt.z + projParams_d.w;
+
+				int x = (int)(pt_image.x + 0.5f);
+				int y = (int)(pt_image.y + 0.5f);
+
+				std::vector<Vector2i> pos_s;
+				findNeighborsInDepthMap(x, y, 3, pos_s);
+
+				Vector3f dpt;
+				float min_dis = 9999.0f;
+
+				if (pos_s.size() > 0){
+					for (int k = 0; k < pos_s.size(); k++){
+						int w = pos_s[k].x;
+						int h = pos_s[k].y;
+
+						Vector3f ptem;
+						ptem.z = depth[w + h * depth_image_width];
+						ptem.x = ptem.z * ((float(w) - projParams_d.z) / projParams_d.x);
+						ptem.y = ptem.z * ((float(h) - projParams_d.w) / projParams_d.y);
+
+						double dis = (ptem.x - vpt.x)*(ptem.x - vpt.x) + (ptem.y - vpt.y)*(ptem.y - vpt.y) + (ptem.z - vpt.z)*(ptem.z - vpt.z);
+					 
+						if (dis < min_dis){
+							min_dis = dis;
+							dpt = ptem;
+						}
+					}
+
+					if (min_dis > 0.01){
+						dpt.z = -1;
+					}
+				}
+				else{
+					dpt.z = -1;
+				}
+
+				dps.push_back(dpt);
+
+				index++;
+			}
+		}
 	}
 }
 
@@ -493,7 +573,13 @@ static int motions_progress(
 // main optimization function
 void ITMMotionAnalysis::optimizeEnergyFunction(ITMFloatImage *newDepthImage)
 {
-	MotionsData data(this, newDepthImage);
+	int depth_image_width = newDepthImage->noDims.x;
+	int depth_image_height = newDepthImage->noDims.y;
+	float *depth_device = newDepthImage->GetData(MEMORYDEVICE_CUDA);
+	float *depth = (float*)malloc(depth_image_width*depth_image_height * sizeof(float));
+	ITMSafeCall(cudaMemcpy(depth, depth_device, (depth_image_width * depth_image_height)*sizeof(float), cudaMemcpyDeviceToHost));
+
+	MotionsData data(this, depth, depth_image_width, depth_image_height);
 
 	int n = data.x0.size();
 	lbfgsfloatval_t *x = lbfgs_malloc(n);
@@ -548,6 +634,9 @@ void ITMMotionAnalysis::optimizeEnergyFunction(ITMFloatImage *newDepthImage)
 		double dot1 = mni.x * delta_mvi_dvi.x + mni.y * delta_mvi_dvi.y + mni.z * delta_mvi_dvi.z;
 		f += dot1 * dot1;
 	}
+
+	free(depth);
+	depth = NULL;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -557,16 +646,22 @@ double motions_function(const std::vector<double> &x, std::vector<double> &grad,
 	MotionsData* d = (MotionsData*)data;
 	const std::vector<Vector3f>& points = d->points;
 	const std::vector<Vector3f>& normals = d->normals;
-	const std::vector<Vector3f>& dpoints = d->dpoints;
+	std::vector<Vector3f>& dpoints = d->dpoints;
 	const std::vector<double>& x0 = d->x0;
 	const std::vector<int>& visibles = d->visibles;
 	const std::vector<bool>& livelist = d->livelist;
 	const std::vector<std::vector<unsigned int>>& neighborhood = d->neighborhood;
 	ITMMotionAnalysis* malys = d->malys;
+	float *depth = d->depth;
 	//float lambda = d->lambda;
 	float alfa = d->alfa;
 	float beta = d->beta;
 	//////////////////////////////////////////////////////////////////////////
+
+	if (malys->changeDpWhenIteration){
+		d->computeDpoints(depth, x, dpoints);
+	}
+
 	// initialize
 	double f = 0;
 	for (int i = 0; i < (int)x.size(); ++i) {
@@ -673,7 +768,7 @@ double motions_function(const std::vector<double> &x, std::vector<double> &grad,
 		grad[i * 6 + 5] += 2.0f * (mvi.y - dvi.y)*((cai*cbi_)*mvi.y + (-cai*sbi_)*mvi.z);
 		grad[i * 6 + 5] += 2.0f * (mvi.z - dvi.z)*((shi*sai*cbi_ + chi*sbi_)*mvi.y + (-shi*sai*sbi_ + chi*cbi_)*mvi.z);
 	}
-
+	printf("0000000\n");
 	// reg term
 	for (int i = 0; i < (int)x.size() / 6; i++){
 		const std::vector<unsigned int>& neighbors = neighborhood[i];
@@ -770,7 +865,7 @@ double motions_function(const std::vector<double> &x, std::vector<double> &grad,
 			grad[ind * 6 + 5] += (-factor / squared_distance) * 2.0f * (mvij.z - mvjj.z) * ((shi * sai * cbi_ + chi * sbi_) * vj.y + (-shi * sai * sbi_ + chi * cbi_) * vj.z);
 		}
 	}
-
+	printf("111111\n");
 	return f;
 }
 
@@ -778,7 +873,13 @@ double motions_function(const std::vector<double> &x, std::vector<double> &grad,
 // main optimization function
 void ITMMotionAnalysis::optimizeEnergyFunctionNlopt(ITMFloatImage *newDepthImage)
 {
-	MotionsData data(this, newDepthImage);
+	int depth_image_width = newDepthImage->noDims.x;
+	int depth_image_height = newDepthImage->noDims.y;
+	float *depth_device = newDepthImage->GetData(MEMORYDEVICE_CUDA);
+	float *depth = (float*)malloc(depth_image_width*depth_image_height * sizeof(float));
+	ITMSafeCall(cudaMemcpy(depth, depth_device, (depth_image_width * depth_image_height)*sizeof(float), cudaMemcpyDeviceToHost));
+
+	MotionsData data(this, depth, depth_image_width, depth_image_height);
 	
 	int n = data.x0.size();
 	std::vector<double> x(n);
@@ -786,7 +887,7 @@ void ITMMotionAnalysis::optimizeEnergyFunctionNlopt(ITMFloatImage *newDepthImage
 		x[i] = data.x0[i];
 	}
 
-	nlopt::opt opt(nlopt::LD_MMA, n);
+	nlopt::opt opt(nlopt::LD_LBFGS, n);
 	opt.set_min_objective(motions_function, &data);
 	opt.set_xtol_rel(1e-5);
 
@@ -795,4 +896,7 @@ void ITMMotionAnalysis::optimizeEnergyFunctionNlopt(ITMFloatImage *newDepthImage
 	
 	std::cout << "minf = " << minf << std::endl;
 	data.updateAllWarpInfo(x);
+
+	free(depth);
+	depth = NULL;
 }

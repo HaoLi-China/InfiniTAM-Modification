@@ -335,14 +335,14 @@ void ITMMainEngine::getAllOperationPoints(std::vector<Vector3f> &points, std::ve
 
 						normals.push_back(n);
 
-						if (value<10 * mu&&value>-10 * mu){
-							sur_normals.push_back(p);
+						if (value < 10 * mu && value > -10 * mu){
+							sur_normals.push_back(n);
 						}
 					}
 
 					points.push_back(p);
 
-					if (value<10 * mu&&value>-10 * mu){
+					if (value < 10 * mu && value > -10 * mu){
 						sur_points.push_back(p);
 					}
 				}
@@ -693,6 +693,11 @@ void ITMMainEngine::getVisibleControlPoints(const std::vector<Vector3f> &cpoints
 			vpts.push_back(pt);
 		}
 	}
+
+	//just for debug
+	const std::vector<Vector3f> normals;
+	const std::vector<Vector3u> colors;
+	PointsIO::savePLYfile("test.ply", vpts, normals, colors);
 
 	Vector3f *pointSet = (Vector3f*)malloc((vpts.size())*sizeof(Vector3f));
 	for (int i = 0; i < vpts.size(); i++){

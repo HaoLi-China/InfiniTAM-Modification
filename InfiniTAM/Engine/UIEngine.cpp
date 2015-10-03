@@ -679,6 +679,8 @@ void UIEngine::GetFusionScreenshot(ITMUChar4Image *dest) const
 
 void UIEngine::ProcessFrame()
 {
+	std::cout << "process frame "<< currentFrameNo << std::endl;
+
 	if (!imageSource->hasMoreImages()) return;
 	imageSource->getImages(inputRGBImage, inputRawDepthImage);
 
