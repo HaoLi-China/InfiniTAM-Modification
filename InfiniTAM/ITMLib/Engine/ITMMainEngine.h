@@ -137,7 +137,7 @@ namespace ITMLib
 			void saveSurfacePoints(const std::string &filename);//Hao added it
 
 			static void saveSDFs(const ITMScene<ITMVoxel, ITMVoxelIndex> *scene, const ITMRenderState *renderState, const std::string &filename);// Hao added it,just for debug
-
+			static void testSamePosControlPoints(const std::vector<Vector3f> &cpoints);// Hao added it,just for debug
 
 			Vector2i trackedImageSize;//Hao added it
 			const float CP_RESOLUTION = 0.04;//Hao added it

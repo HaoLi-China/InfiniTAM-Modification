@@ -119,7 +119,6 @@ void ITMMainEngine::SaveSceneToMesh(const char *objFileName)
 //Hao modified it
 void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage, ITMIMUMeasurement *imuMeasurement)
 {
-	std::cout << "new Frame" << std::endl;
 	// prepare image and turn it into a depth image
 	if (imuMeasurement == NULL) viewBuilder->UpdateView(&view, rgbImage, rawDepthImage, settings->useBilateralFilter, settings->modelSensorNoise);
 	else viewBuilder->UpdateView(&view, rgbImage, rawDepthImage, settings->useBilateralFilter, imuMeasurement);
@@ -140,11 +139,15 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 	
 		if (settings->useControlPoints){
 			getAllOperationPoints(points, normals, sur_points, sur_normals, sdf_s, w_s, true);
+			//if (cpoints.size() == 0){
 			updateControlPoints(sur_points, sur_normals, cpoints, cnormals);
+			//}
 		}
 		else{
 			getAllOperationPoints(points, normals, sur_points, sur_normals, sdf_s, w_s, true);
 		}
+
+		testSamePosControlPoints(cpoints);//just for debug
 
 		//just for debug
 		//PointsIO::savePLYfile("cpoints.ply", cpoints, cnormals);
@@ -1033,6 +1036,36 @@ void ITMMainEngine::saveSurfacePoints(const std::string &filename){
 
 	getAllSurfacePoints(points, normals, true);
 	PointsIO::savePLYfile(filename, points, normals, colors);
+}
+
+void ITMMainEngine::testSamePosControlPoints(const std::vector<Vector3f> &cpoints){
+
+	Vector3f *pointSet = (Vector3f*)malloc((cpoints.size())*sizeof(Vector3f));
+	for (int i = 0; i < cpoints.size(); i++){
+		pointSet[i].x = cpoints[i].x;
+		pointSet[i].y = cpoints[i].y;
+		pointSet[i].z = cpoints[i].z;
+	}
+
+	KdTreeSearch_ETH kd_eth;
+	kd_eth.add_vertex_set(pointSet, cpoints.size());
+	kd_eth.end();
+
+	for (int i = 0; i < cpoints.size(); i++){
+		Vector3f p = cpoints[i];
+		std::vector<double> squared_distances;
+		std::vector<Vector3f> neighbors;
+		//get neighbor points within a range of radius
+		kd_eth.find_closest_K_points(p, 2, neighbors, squared_distances);
+
+		if (sqrt(squared_distances[1]) ==0 ){
+			printf("SamePosControlPoints!\n");
+		}
+	}
+
+	kd_eth.begin();
+	free(pointSet);
+	pointSet = NULL;
 }
 
 ////Hao added it: reset all voxels

@@ -9,9 +9,11 @@ using namespace ITMLib::Engine;
 ITMMotionAnalysis::ITMMotionAnalysis(const ITMRGBDCalib *calib, bool useControlPoints){
 	this->calib = const_cast<ITMRGBDCalib*>(calib);
 	this->useControlPoints = useControlPoints;
-	this->changeDpWhenIteration = false;
+	this->changeDpWhenIteration = true;
 
 	findDepthPointsPolicy = 1;
+	regTermPolicy = 2;
+	dataTermPolicy = 0;
 }
 
 ITMMotionAnalysis::~ITMMotionAnalysis(){
@@ -72,7 +74,11 @@ void ITMMotionAnalysis::getAllOperationPointsTransformation(const std::vector<Ve
 
 			//get neighbor points within a range of radius
 			std::vector<unsigned int> neighbors;
-			kd_eth.find_points_in_radius(p, INFLUENCE_RADIUS*INFLUENCE_RADIUS, neighbors);
+			kd_eth.find_points_in_radius(p, INFLUENCE_RADIUS*INFLUENCE_RADIUS, neighbors); 
+
+			/*if (neighbors.size()==0){
+				printf("neighbors.size()==0\n");
+			}*/
 			
 			std::vector<double> weights;
 			double weight_sum = 0;
@@ -82,7 +88,7 @@ void ITMMotionAnalysis::getAllOperationPointsTransformation(const std::vector<Ve
 				unsigned int index = neighbors[k];
 				double squared_dis = (cpoints[index].x - p.x)*(cpoints[index].x - p.x) + (cpoints[index].y - p.y)*(cpoints[index].y - p.y) + (cpoints[index].z - p.z)*(cpoints[index].z - p.z);
 
-				double weight_tem = exp(-squared_dis / (2.0*INFLUENCE_RADIUS*INFLUENCE_RADIUS));
+				double weight_tem = exp(-squared_dis / (2.0f*INFLUENCE_RADIUS*INFLUENCE_RADIUS));
 				weights.push_back(weight_tem);
 				weight_sum += weight_tem;
 			}
