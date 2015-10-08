@@ -142,7 +142,7 @@ MotionsData::MotionsData(ITMMotionAnalysis *motionAnalysis, float *depth, int de
 		allPointSet = NULL;
 	}
 	else if (malys->regTermPolicy == 1 || malys->regTermPolicy == 2){
-		lambda = 0.5f;
+		lambda = 2.0f;
 
 		Vector3f *pointSet = (Vector3f*)malloc(points.size()*sizeof(Vector3f));
 		memset(pointSet, 0, points.size()*sizeof(Vector3f));

@@ -9,7 +9,7 @@ using namespace ITMLib::Engine;
 ITMMotionAnalysis::ITMMotionAnalysis(const ITMRGBDCalib *calib, bool useControlPoints){
 	this->calib = const_cast<ITMRGBDCalib*>(calib);
 	this->useControlPoints = useControlPoints;
-	this->changeDpWhenIteration = true;
+	this->changeDpWhenIteration = false;
 
 	findDepthPointsPolicy = 1;
 	regTermPolicy = 2;
@@ -74,7 +74,15 @@ void ITMMotionAnalysis::getAllOperationPointsTransformation(const std::vector<Ve
 
 			//get neighbor points within a range of radius
 			std::vector<unsigned int> neighbors;
-			kd_eth.find_points_in_radius(p, INFLUENCE_RADIUS*INFLUENCE_RADIUS, neighbors); 
+			//kd_eth.find_points_in_radius(p, INFLUENCE_RADIUS*INFLUENCE_RADIUS, neighbors); 
+			kd_eth.find_closest_K_points(p, 3, neighbors);
+
+			if (neighbors.size() == 0){
+				std::cout << "p.x:" << p.x << std::endl;
+				std::cout << "p.y:" << p.y << std::endl;
+				std::cout << "p.z:" << p.z << std::endl;
+			}
+
 
 			/*if (neighbors.size()==0){
 				printf("neighbors.size()==0\n");

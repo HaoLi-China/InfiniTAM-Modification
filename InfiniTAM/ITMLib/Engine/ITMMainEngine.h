@@ -140,7 +140,7 @@ namespace ITMLib
 			static void testSamePosControlPoints(const std::vector<Vector3f> &cpoints);// Hao added it,just for debug
 
 			Vector2i trackedImageSize;//Hao added it
-			const float CP_RESOLUTION = 0.04;//Hao added it
+			const float CP_RESOLUTION = 0.025;//Hao added it
 			std::vector<Vector3f> cpoints;
 			std::vector<Vector3f> cnormals;
 			std::vector<std::vector<Vector3f>> cpoints_vec;

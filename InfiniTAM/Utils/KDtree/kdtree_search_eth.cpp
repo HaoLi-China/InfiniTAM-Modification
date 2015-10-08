@@ -87,7 +87,7 @@ void KdTreeSearch_ETH::find_closest_K_points(
 	get_tree(tree_)->queryPosition(v3d);
 
 	unsigned int num = get_tree(tree_)->getNOfFoundNeighbours();
-	if (num == k && num > 1) {
+	if (num == k) {
 		neighbor_indices.resize(num);
 		for (unsigned int i = 0; i < num; ++i) {
 			neighbor_indices[i] = get_tree(tree_)->getNeighbourPositionIndex(i);
