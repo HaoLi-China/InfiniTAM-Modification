@@ -25,15 +25,6 @@
     <Filter Include="ITMLib\Utils">
       <UniqueIdentifier>{18ccd70d-1127-4103-9624-6b7cd10b8f4e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ITMLib\Engine\DeviceSpecific">
-      <UniqueIdentifier>{0bc217ca-3a93-4865-b554-4b5c013a93b9}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ITMLib\Engine\DeviceSpecific\CUDA">
-      <UniqueIdentifier>{f0ab1e40-ee17-4e17-a928-11d247a89293}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ITMLib\Engine\DeviceSpecific\CPU">
-      <UniqueIdentifier>{7b5b0e02-10b2-4547-a38f-59d472a65838}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ITMLib\Engine\DeviceAgnostic">
       <UniqueIdentifier>{81fe007a-9227-4a3c-8cc3-91bd54e42b5e}</UniqueIdentifier>
     </Filter>
@@ -79,6 +70,15 @@
     <Filter Include="Utils\PointsIO">
       <UniqueIdentifier>{51c7786f-a195-4579-ae63-0189168ea714}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ITMLib\Engine\DeviceAgnostic\DeviceSpecific">
+      <UniqueIdentifier>{0bc217ca-3a93-4865-b554-4b5c013a93b9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA">
+      <UniqueIdentifier>{f0ab1e40-ee17-4e17-a928-11d247a89293}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CPU">
+      <UniqueIdentifier>{7b5b0e02-10b2-4547-a38f-59d472a65838}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\OpenNIEngine.cpp">
@@ -89,19 +89,19 @@
       <Filter>Engine\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ITMLib\Engine\DeviceSpecific\CPU\ITMLowLevelEngine_CPU.cpp">
-      <Filter>ITMLib\Engine\DeviceSpecific\CPU</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CPU</Filter>
     </ClCompile>
     <ClCompile Include="ITMLib\Engine\DeviceSpecific\CPU\ITMDepthTracker_CPU.cpp">
-      <Filter>ITMLib\Engine\DeviceSpecific\CPU</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CPU</Filter>
     </ClCompile>
     <ClCompile Include="ITMLib\Engine\DeviceSpecific\CPU\ITMSceneReconstructionEngine_CPU.cpp">
-      <Filter>ITMLib\Engine\DeviceSpecific\CPU</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CPU</Filter>
     </ClCompile>
     <ClCompile Include="ITMLib\Engine\ITMMainEngine.cpp">
       <Filter>ITMLib\Engine</Filter>
     </ClCompile>
     <ClCompile Include="ITMLib\Engine\DeviceSpecific\CPU\ITMColorTracker_CPU.cpp">
-      <Filter>ITMLib\Engine\DeviceSpecific\CPU</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CPU</Filter>
     </ClCompile>
     <ClCompile Include="ITMLib\Engine\ITMVisualisationEngine.cpp">
       <Filter>ITMLib\Engine</Filter>
@@ -110,16 +110,16 @@
       <Filter>Engine\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ITMLib\Engine\DeviceSpecific\CPU\ITMSwappingEngine_CPU.cpp">
-      <Filter>ITMLib\Engine\DeviceSpecific\CPU</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CPU</Filter>
     </ClCompile>
     <ClCompile Include="ITMLib\Engine\DeviceSpecific\CPU\ITMVisualisationEngine_CPU.cpp">
-      <Filter>ITMLib\Engine\DeviceSpecific\CPU</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CPU</Filter>
     </ClCompile>
     <ClCompile Include="Engine\Kinect2Engine.cpp">
       <Filter>Engine\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ITMLib\Engine\DeviceSpecific\CPU\ITMRenTracker_CPU.cpp">
-      <Filter>ITMLib\Engine\DeviceSpecific\CPU</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CPU</Filter>
     </ClCompile>
     <ClCompile Include="ITMLib\Engine\ITMColorTracker.cpp">
       <Filter>ITMLib\Engine\Trackers</Filter>
@@ -134,7 +134,7 @@
       <Filter>ITMLib\Engine</Filter>
     </ClCompile>
     <ClCompile Include="ITMLib\Engine\DeviceSpecific\CPU\ITMViewBuilder_CPU.cpp">
-      <Filter>ITMLib\Engine\DeviceSpecific\CPU</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CPU</Filter>
     </ClCompile>
     <ClCompile Include="ITMLib\Engine\ITMIMUTracker.cpp">
       <Filter>ITMLib\Engine\Trackers</Filter>
@@ -161,13 +161,13 @@
       <Filter>ITMLib\Engine</Filter>
     </ClCompile>
     <ClCompile Include="ITMLib\Engine\DeviceSpecific\CPU\ITMMeshingEngine_CPU.cpp">
-      <Filter>ITMLib\Engine\DeviceSpecific\CPU</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CPU</Filter>
     </ClCompile>
     <ClCompile Include="ITMLib\Engine\ITMWeightedICPTracker.cpp">
       <Filter>ITMLib\Engine\Trackers</Filter>
     </ClCompile>
     <ClCompile Include="ITMLib\Engine\DeviceSpecific\CPU\ITMWeightedICPTracker_CPU.cpp">
-      <Filter>ITMLib\Engine\DeviceSpecific\CPU</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CPU</Filter>
     </ClCompile>
     <ClCompile Include="Engine\LibUVCEngine.cpp">
       <Filter>Engine\Source Files</Filter>
@@ -253,22 +253,22 @@
       <Filter>Engine\Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceSpecific\CPU\ITMLowLevelEngine_CPU.h">
-      <Filter>ITMLib\Engine\DeviceSpecific\CPU</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CPU</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceSpecific\CPU\ITMDepthTracker_CPU.h">
-      <Filter>ITMLib\Engine\DeviceSpecific\CPU</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CPU</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceAgnostic\ITMSceneReconstructionEngine.h">
       <Filter>ITMLib\Engine\DeviceAgnostic</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceSpecific\CPU\ITMSceneReconstructionEngine_CPU.h">
-      <Filter>ITMLib\Engine\DeviceSpecific\CPU</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CPU</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\ITMMainEngine.h">
       <Filter>ITMLib\Engine</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceSpecific\CPU\ITMColorTracker_CPU.h">
-      <Filter>ITMLib\Engine\DeviceSpecific\CPU</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CPU</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\ITMVisualisationEngine.h">
       <Filter>ITMLib\Engine</Filter>
@@ -280,16 +280,16 @@
       <Filter>ITMLib\Engine</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMColorTracker_CUDA.h">
-      <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMDepthTracker_CUDA.h">
-      <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMLowLevelEngine_CUDA.h">
-      <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMSceneReconstructionEngine_CUDA.h">
-      <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceAgnostic\ITMDepthTracker.h">
       <Filter>ITMLib\Engine\DeviceAgnostic</Filter>
@@ -307,13 +307,13 @@
       <Filter>ITMLib\Engine</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMSwappingEngine_CUDA.h">
-      <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceSpecific\CPU\ITMSwappingEngine_CPU.h">
-      <Filter>ITMLib\Engine\DeviceSpecific\CPU</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CPU</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMCUDAUtils.h">
-      <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceAgnostic\ITMSwappingEngine.h">
       <Filter>ITMLib\Engine\DeviceAgnostic</Filter>
@@ -322,10 +322,10 @@
       <Filter>ITMLib\Engine\DeviceAgnostic</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceSpecific\CPU\ITMVisualisationEngine_CPU.h">
-      <Filter>ITMLib\Engine\DeviceSpecific\CPU</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CPU</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMVisualisationEngine_CUDA.h">
-      <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceAgnostic\ITMRepresentationAccess.h">
       <Filter>ITMLib\Engine\DeviceAgnostic</Filter>
@@ -337,10 +337,10 @@
       <Filter>ITMLib\Engine\DeviceAgnostic</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceSpecific\CPU\ITMRenTracker_CPU.h">
-      <Filter>ITMLib\Engine\DeviceSpecific\CPU</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CPU</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMRenTracker_CUDA.h">
-      <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\ITMColorTracker.h">
       <Filter>ITMLib\Engine\Trackers</Filter>
@@ -385,10 +385,10 @@
       <Filter>ITMLib\Engine\DeviceAgnostic</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceSpecific\CPU\ITMViewBuilder_CPU.h">
-      <Filter>ITMLib\Engine\DeviceSpecific\CPU</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CPU</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMViewBuilder_CUDA.h">
-      <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\ITMIMUTracker.h">
       <Filter>ITMLib\Engine\Trackers</Filter>
@@ -505,19 +505,19 @@
       <Filter>ITMLib\Engine\DeviceAgnostic</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceSpecific\CPU\ITMMeshingEngine_CPU.h">
-      <Filter>ITMLib\Engine\DeviceSpecific\CPU</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CPU</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMMeshingEngine_CUDA.h">
-      <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\ITMWeightedICPTracker.h">
       <Filter>ITMLib\Engine\Trackers</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceSpecific\CPU\ITMWeightedICPTracker_CPU.h">
-      <Filter>ITMLib\Engine\DeviceSpecific\CPU</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CPU</Filter>
     </ClInclude>
     <ClInclude Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMWeightedICPTracker_CUDA.h">
-      <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA</Filter>
     </ClInclude>
     <ClInclude Include="Engine\LibUVCEngine.h">
       <Filter>Engine\Header Files</Filter>
@@ -696,34 +696,34 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMColorTracker_CUDA.cu">
-      <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMDepthTracker_CUDA.cu">
-      <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMLowLevelEngine_CUDA.cu">
-      <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMSceneReconstructionEngine_CUDA.cu">
-      <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMSwappingEngine_CUDA.cu">
-      <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMVisualisationEngine_CUDA.cu">
-      <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMRenTracker_CUDA.cu">
-      <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMViewBuilder_CUDA.cu">
-      <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMMeshingEngine_CUDA.cu">
-      <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="ITMLib\Engine\DeviceSpecific\CUDA\ITMWeightedICPTracker_CUDA.cu">
-      <Filter>ITMLib\Engine\DeviceSpecific\CUDA</Filter>
+      <Filter>ITMLib\Engine\DeviceAgnostic\DeviceSpecific\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="Utils\KDtree\CUDA_KDtree.cu">
       <Filter>Utils\KDtree</Filter>

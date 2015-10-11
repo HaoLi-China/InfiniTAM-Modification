@@ -3,6 +3,7 @@
 
 #include "ITMMotionAnalysis.h"
 #include "../../Utils/KDtree/kdtree_search_eth.h"
+#include "../../Utils/PointsIO/PointsIO.h"
 
 using namespace ITMLib::Engine;
 
@@ -11,9 +12,9 @@ ITMMotionAnalysis::ITMMotionAnalysis(const ITMRGBDCalib *calib, bool useControlP
 	this->useControlPoints = useControlPoints;
 	this->changeDpWhenIteration = false;
 
-	findDepthPointsPolicy = 1;
-	regTermPolicy = 2;
-	dataTermPolicy = 0;
+	findDepthPointsPolicy = 1; // 0:Just do projection       1:Choose dpoint within a rect region.
+	regTermPolicy = 5; // 0:Modified DynamicFusion    1:Sig2014    2:DynamicFusion   3:as-rigid  4.modified as-rigid   5.new modified as-rigid 
+	dataTermPolicy = 1; //0:pointsWithNormals 1:pointWithNormals and only points
 }
 
 ITMMotionAnalysis::~ITMMotionAnalysis(){
@@ -75,7 +76,7 @@ void ITMMotionAnalysis::getAllOperationPointsTransformation(const std::vector<Ve
 			//get neighbor points within a range of radius
 			std::vector<unsigned int> neighbors;
 			//kd_eth.find_points_in_radius(p, INFLUENCE_RADIUS*INFLUENCE_RADIUS, neighbors); 
-			kd_eth.find_closest_K_points(p, 3, neighbors);
+			kd_eth.find_closest_K_points(p, 1, neighbors);
 
 			if (neighbors.size() == 0){
 				std::cout << "p.x:" << p.x << std::endl;
@@ -133,6 +134,9 @@ void ITMMotionAnalysis::getAllOperationPointsTransformation(const std::vector<Ve
 				cnormals[i] = TransformNormal(rot, cnormals[i]);
 			}
 		}
+
+		//just for debug
+		PointsIO::savePLYfile("cpoints.ply", cpoints, cnormals, Vector3u(255, 255, 0));
 }
 
 void ITMMotionAnalysis::Transformation2Matrix4(const Transformation &tf, Matrix4f &mtf){

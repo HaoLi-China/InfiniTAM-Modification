@@ -55,7 +55,7 @@ namespace ITMLib
 			void RotTrans2Transformation(const std::vector<float>& rot, const std::vector<float>& trans, Transformation &tf); // get transformation
 			void Matrix42Transformation(const Matrix4f &mtf, Transformation &tf);
 			void getAllOperationPointsTransformation(const std::vector<Vector3f> &points, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, std::vector<Transformation> &tfs);
-
+			
 			bool changeDpWhenIteration;
 			int findDepthPointsPolicy;
 			int dataTermPolicy;
@@ -100,6 +100,7 @@ namespace ITMLib
 			std::vector<double> x0; // 6 * n warp transformations, n represents all nodes
 
 			std::vector<std::vector<unsigned int>> neighborhood;  // n, neighbor nodes of each node
+			std::vector<std::vector<unsigned int>> valid_neighborhood;  // visible neighbor nodes of each invisible node
 
 			float alfa;
 			float beta;
