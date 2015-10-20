@@ -61,8 +61,6 @@ namespace ITMLib
 			
 			bool changeDpWhenIteration;
 			int findDepthPointsPolicy;
-			int dataTermPolicy;
-			int regTermPolicy;
 
 		private:
 			ITMRGBDCalib *calib;

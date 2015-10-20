@@ -56,8 +56,8 @@ static void CreateDefaultImageSource(ImageSourceEngine* & imageSource, IMUSource
 		const char *path1 = "..\\..\\data\\chair_translation_rgb_depth\\depth_image";
 		const char *path2 = "..\\..\\data\\chair_translation_rgb_depth\\rgb_image";
 
-		//const char *path1 = "..\\..\\data\\test_data1\\depth_image";
-		//const char *path2 = "..\\..\\data\\test_data1\\rgb_image";
+		//const char *path1 = "..\\..\\data\\test_data\\depth_image";
+		//const char *path2 = "..\\..\\data\\test_data\\rgb_image";
 
 		//const char *path1 = NULL;
 		//const char *path2 = NULL;

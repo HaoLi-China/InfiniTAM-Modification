@@ -10,11 +10,9 @@ using namespace ITMLib::Engine;
 ITMMotionAnalysis::ITMMotionAnalysis(const ITMRGBDCalib *calib, bool useControlPoints){
 	this->calib = const_cast<ITMRGBDCalib*>(calib);
 	this->useControlPoints = useControlPoints;
-	this->changeDpWhenIteration = false;
+	this->changeDpWhenIteration = true;
 
-	findDepthPointsPolicy = 1; // 0:Just do projection       1:Choose dpoint within a rect region.
-	regTermPolicy = 5; // 0:Modified DynamicFusion    1:Sig2014    2:DynamicFusion   3:as-rigid  4.modified as-rigid   5.new modified as-rigid 
-	dataTermPolicy = 1; //0:pointsWithNormals 1:pointWithNormals and only points
+	findDepthPointsPolicy = 0; // 0:Just do projection        1:Choose dpoint within a rect region.
 }
 
 ITMMotionAnalysis::~ITMMotionAnalysis(){
@@ -57,6 +55,7 @@ void ITMMotionAnalysis::getAllVisibleList(std::vector<bool> &visiblelist){
 	visiblelist = this->visiblelist;
 }
 
+//infer transformation of new points
 void ITMMotionAnalysis::inferTransformations(const std::vector<Vector3f> &cpoints, const std::vector<Transformation> &ctfs, const std::vector<Vector3f> &npoints, std::vector<Transformation> &ntfs){
 	ntfs.clear();
 	
@@ -121,88 +120,6 @@ void ITMMotionAnalysis::inferTransformations(const std::vector<Vector3f> &cpoint
 	free(pointSet);
 	pointSet = NULL;
 }
-
-//void ITMMotionAnalysis::getAllOperationPointsTransformation(const std::vector<Vector3f> &points, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, std::vector<Transformation> &tfs){
-//	    
-//	    Vector3f *pointSet = (Vector3f*)malloc((cpoints.size())*sizeof(Vector3f));
-//		for (int i = 0; i < cpoints.size(); i++){
-//			pointSet[i].x = cpoints[i].x;
-//			pointSet[i].y = cpoints[i].y;
-//			pointSet[i].z = cpoints[i].z;
-//		}
-//
-//		KdTreeSearch_ETH kd_eth;
-//		kd_eth.add_vertex_set(pointSet, cpoints.size());
-//		kd_eth.end();
-//
-//		for (int i = 0; i < points.size(); i++){
-//			Vector3f p = points[i];
-//
-//			//get neighbor points within a range of radius
-//			std::vector<unsigned int> neighbors;
-//			//kd_eth.find_points_in_radius(p, INFLUENCE_RADIUS*INFLUENCE_RADIUS, neighbors); 
-//			kd_eth.find_closest_K_points(p, 1, neighbors);
-//
-//			if (neighbors.size() == 0){
-//				std::cout << "p.x:" << p.x << std::endl;
-//				std::cout << "p.y:" << p.y << std::endl;
-//				std::cout << "p.z:" << p.z << std::endl;
-//			}
-//
-//
-//			/*if (neighbors.size()==0){
-//				printf("neighbors.size()==0\n");
-//			}*/
-//			
-//			std::vector<double> weights;
-//			double weight_sum = 0;
-//			Transformation trans_res = { 0, 0, 0, 0, 0, 0 };
-//
-//			for (int k = 0; k < neighbors.size(); k++){
-//				unsigned int index = neighbors[k];
-//				double squared_dis = (cpoints[index].x - p.x)*(cpoints[index].x - p.x) + (cpoints[index].y - p.y)*(cpoints[index].y - p.y) + (cpoints[index].z - p.z)*(cpoints[index].z - p.z);
-//
-//				double weight_tem = exp(-squared_dis / (2.0f*INFLUENCE_RADIUS*INFLUENCE_RADIUS));
-//				weights.push_back(weight_tem);
-//				weight_sum += weight_tem;
-//			}
-//
-//			//normalize the weight
-//			for (int k = 0; k < weights.size(); k++){
-//				weights[k] /= weight_sum;
-//			}
-//
-//			//compute the new transformation
-//			for (int k = 0; k < neighbors.size(); k++){
-//				unsigned int index = neighbors[k];
-//				trans_res.tx += weights[k] * ctfs[index].tx;
-//				trans_res.ty += weights[k] * ctfs[index].ty;
-//				trans_res.tz += weights[k] * ctfs[index].tz;
-//				trans_res.ry += weights[k] * ctfs[index].ry;
-//				trans_res.rz += weights[k] * ctfs[index].rz;
-//				trans_res.rx += weights[k] * ctfs[index].rx;
-//			}
-//
-//			tfs.push_back(trans_res);
-//		}
-//
-//		kd_eth.begin();
-//		free(pointSet);
-//		pointSet = NULL;
-//
-//		if (useControlPoints){
-//			//transform control points
-//			for (int i = 0; i < cpoints.size(); i++){
-//				std::vector<float> rot, trans;
-//				Transformation2RotTrans(ctfs[i], rot, trans);
-//				cpoints[i] = TransformPoint(rot, trans, cpoints[i]);
-//				cnormals[i] = TransformNormal(rot, cnormals[i]);
-//			}
-//		}
-//
-//		//just for debug
-//		PointsIO::savePLYfile("cpoints.ply", cpoints, cnormals, Vector3u(255, 255, 0));
-//}
 
 //transform all points
 void ITMMotionAnalysis::transformAllPoints(std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals){

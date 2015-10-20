@@ -703,10 +703,10 @@ void UIEngine::ProcessFrame()
 	std::cout << "process frame "<< currentFrameNo << std::endl;
 
     //just for debug
-	/*UIEngine *uiEngine = UIEngine::Instance();
-	if (currentFrameNo == 19){
+	UIEngine *uiEngine = UIEngine::Instance();
+	if (currentFrameNo == 11){
 		uiEngine->mainLoopAction = UIEngine::PROCESS_FRAME;
-	}*/
+	}
 
 	if (!imageSource->hasMoreImages()) return;
 	imageSource->getImages(inputRGBImage, inputRawDepthImage);

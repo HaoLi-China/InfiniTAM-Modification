@@ -485,7 +485,7 @@ void ITMMainEngine::getAllSurfacePoints(std::vector<Vector3f> &points, std::vect
 				ITMVoxel res = voxels[(hashEntry.ptr * SDF_BLOCK_SIZE3) + j];
 
 				float value = ITMVoxel::SDF_valueToFloat(res.sdf);
-				if (value<10 * mu&&value>-10 * mu){ //mu=0.02
+				if (value<5 * mu&&value>-5 * mu){ //mu=0.02
 					Vector3f p;
 					float voxelSize = 0.125f;
 					float blockSizeWorld = scene->sceneParams->voxelSize*SDF_BLOCK_SIZE; // = 0.005*8;
@@ -1000,22 +1000,22 @@ void ITMMainEngine::getVisibleControlPoints(const std::vector<Vector3f> &tcpoint
 	//}
 	//std::cout << "count1:" << count1 << std::endl;
 
-	//std::vector<Vector3f> tem_pts;
-	//for (int y = 0; y < imgSize.y; y++){
-	//	for (int x = 0; x < imgSize.x; x++){
-	//		int id = imgSize.x * y + x;
-	//		if (depthImage[id] > 0){
-	//			Vector3f pt;
-	//			pt.z = depthImage[id];
-	//			pt.x = pt.z * ((float(x) - projParams_d.z) * 1.0 / projParams_d.x);
-	//			pt.y = pt.z * ((float(y) - projParams_d.w) * 1.0 / projParams_d.y);
+	std::vector<Vector3f> tem_pts;
+	for (int y = 0; y < imgSize.y; y++){
+		for (int x = 0; x < imgSize.x; x++){
+			int id = imgSize.x * y + x;
+			if (depthImage[id] > 0){
+				Vector3f pt;
+				pt.z = depthImage[id];
+				pt.x = pt.z * ((float(x) - projParams_d.z) * 1.0 / projParams_d.x);
+				pt.y = pt.z * ((float(y) - projParams_d.w) * 1.0 / projParams_d.y);
 
-	//			tem_pts.push_back(pt);
-	//		}
-	//	}
-	//}
-	//const std::vector<Vector3f> nors;
-	//PointsIO::savePLYfile("tem_points.ply", tem_pts, nors, Vector3u(0, 0, 255));
+				tem_pts.push_back(pt);
+			}
+		}
+	}
+	const std::vector<Vector3f> nors;
+	PointsIO::savePLYfile("tem_points.ply", tem_pts, nors, Vector3u(0, 0, 255));
 
 	for (int i = 0; i < tcpoints.size(); i++){
 		Vector3f pt_camera = tcpoints[i];
@@ -1045,14 +1045,20 @@ void ITMMainEngine::getVisibleControlPoints(const std::vector<Vector3f> &tcpoint
 	}
 	
 	std::vector<Vector3f> vpts;
+	std::vector<Vector3f> nvpts;//debug
 	for (int i = 0; i < tcpoints.size(); i++){
 		if (visiblelist[i]){
 			vpts.push_back(tcpoints[i]);
 		}
+		else{
+			nvpts.push_back(tcpoints[i]);
+		}
 	}
 	printf("666666\n");
-	const std::vector<Vector3f> nors;
+	//const std::vector<Vector3f> nors;
+	PointsIO::savePLYfile("tcpoints.ply", tcpoints, nors, Vector3u(0, 0, 255));
 	PointsIO::savePLYfile("vpts.ply", vpts, nors, Vector3u(0, 255, 0));
+	PointsIO::savePLYfile("nvpts.ply", nvpts, nors, Vector3u(255, 0, 0));
 }
 
 //just for debug
