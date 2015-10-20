@@ -31,6 +31,18 @@ namespace ITMLib
 				triangles = new ORUtils::MemoryBlock<Triangle>(noMaxTriangles, memoryType);
 			}
 
+			void getCpuTriangles(Triangle*& triangleArray){
+				ORUtils::MemoryBlock<Triangle> *cpu_triangles;
+				if (memoryType == MEMORYDEVICE_CUDA)
+				{
+					cpu_triangles = new ORUtils::MemoryBlock<Triangle>(noMaxTriangles, MEMORYDEVICE_CPU);
+					cpu_triangles->SetFrom(triangles, ORUtils::MemoryBlock<Triangle>::CUDA_TO_CPU);
+				}
+				else cpu_triangles = triangles;
+
+				triangleArray = cpu_triangles->GetData(MEMORYDEVICE_CPU);
+			}
+
 			void WriteOBJ(const char *fileName)
 			{
 				ORUtils::MemoryBlock<Triangle> *cpu_triangles; bool shoulDelete = false;

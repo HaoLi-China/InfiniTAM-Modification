@@ -126,24 +126,32 @@ namespace ITMLib
 			void turnOnMainProcessing();
 			void turnOffMainProcessing();
 
-			void getAllOperationPoints(std::vector<Vector3f> &points, std::vector<Vector3f> &normals, std::vector<Vector3f> &sur_points, std::vector<Vector3f> &sur_normals, std::vector<short> &sdf_s, std::vector<uchar> &w_s, const bool withNormals = false);//Hao added it
+			void updateAccumTfs(std::vector<Transformation> &accumTfs, const std::vector<Transformation> &ctfs);
+			void getAllSurfacePoints(std::vector<Vector3f> &sur_points, std::vector<Vector3f> &sur_normals, const bool withNormals = false);//Hao added it
+			void getAllVoxelCenters(std::vector<Vector3f> &points, std::vector<short> &sdf_s, std::vector<uchar> &w_s);//Hao added it
 			void getNewControlPoints(const std::vector<Vector3f> &uspoints, const std::vector<Vector3f> &usnormals, std::vector<Vector3f> &ncpoints, std::vector<Vector3f> &ncnormals);//Hao added it
 			void updateControlPoints(const std::vector<Vector3f> &sur_points, const std::vector<Vector3f> &sur_normals, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals);//Hao added it
-			void getVisibleControlPoints(const std::vector<Vector3f> &cpoints, std::vector<bool> &visiblelist);//Hao added it
-			void transformVoxels(const std::vector<Vector3f> &points, const std::vector<short> &sdf_s, const std::vector<uchar> &w_s, const std::vector<Transformation> &tfs);//Hao added it
-			void resetAllVoxels();//Hao added it
-			void getVisiblePoints(const std::vector<Vector3f> &points, std::vector<bool> &visiblelist);//Hao added it
-			void getAllSurfacePoints(std::vector<Vector3f> &points, std::vector<Vector3f> &normals, const bool withNormals = false);//Hao added it
+			void transformAllVoxelCenters(const std::vector<Vector3f> &cpoints, const std::vector<Transformation> &accumTfs, std::vector<Vector3f> &points);//Hao added it
+			void integrateIntoCanonicalModel(const std::vector<Vector3f> &points, const float* depth, std::vector<short> &sdf_s, std::vector<uchar> &w_s);//Hao added it
+			void getLivePoints(const std::vector<Vector3f> &cpoints, const std::vector<Transformation> &accumTfs, const float* depth, std::vector<Vector3f> &live_points);//Hao added it
+			void allocateNewVoxels(const std::vector<Vector3f> &live_points);//Hao added it
+			void getTransformedControlPoints(std::vector<Vector3f> &tcpoints, std::vector<Vector3f> &tcnormals);//Hao added it
+			void getVisibleControlPoints(const std::vector<Vector3f> &tcpoints, std::vector<bool> &visiblelist);//Hao added it
+			
 			void saveSurfacePoints(const std::string &filename);//Hao added it
 
 			static void saveSDFs(const ITMScene<ITMVoxel, ITMVoxelIndex> *scene, const ITMRenderState *renderState, const std::string &filename);// Hao added it,just for debug
 			static void testSamePosControlPoints(const std::vector<Vector3f> &cpoints);// Hao added it,just for debug
+			void findNeighborsInDepthMap(int x, int y, int scale, std::vector<Vector2i> &pos_s);
 
 			Vector2i trackedImageSize;//Hao added it
 			const float CP_RESOLUTION = 0.025;//Hao added it
+			const float INFLUENCE_RADIUS = 0.03;//Hao added it
 			std::vector<Vector3f> cpoints;
 			std::vector<Vector3f> cnormals;
+			std::vector<Transformation> accumTfs;
 			std::vector<std::vector<Vector3f>> cpoints_vec;
+			std::vector<std::vector<Transformation>> ctfs_vec;
 			std::vector<Vector3f> color_vec;
 
 			/** \brief Constructor

@@ -57,86 +57,164 @@ void ITMMotionAnalysis::getAllVisibleList(std::vector<bool> &visiblelist){
 	visiblelist = this->visiblelist;
 }
 
-void ITMMotionAnalysis::getAllOperationPointsTransformation(const std::vector<Vector3f> &points, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, std::vector<Transformation> &tfs){
-	    
-	    Vector3f *pointSet = (Vector3f*)malloc((cpoints.size())*sizeof(Vector3f));
+void ITMMotionAnalysis::inferTransformations(const std::vector<Vector3f> &cpoints, const std::vector<Transformation> &ctfs, const std::vector<Vector3f> &npoints, std::vector<Transformation> &ntfs){
+	ntfs.clear();
+	
+	Vector3f *pointSet = (Vector3f*)malloc((cpoints.size())*sizeof(Vector3f));
+	for (int i = 0; i < cpoints.size(); i++){
+		pointSet[i].x = cpoints[i].x;
+		pointSet[i].y = cpoints[i].y;
+		pointSet[i].z = cpoints[i].z;
+	}
+
+	KdTreeSearch_ETH kd_eth;
+	kd_eth.add_vertex_set(pointSet, cpoints.size());
+	kd_eth.end();
+
+	for (int i = 0; i < npoints.size(); i++){
+		Vector3f p = npoints[i];
+
+		//get neighbor points within a range of radius
+		std::vector<unsigned int> neighbors;
+		//kd_eth.find_points_in_radius(p, INFLUENCE_RADIUS*INFLUENCE_RADIUS, neighbors); 
+		kd_eth.find_closest_K_points(p, 1, neighbors);
+
+		if (neighbors.size() == 0){
+			std::cout << "p.x:" << p.x << std::endl;
+			std::cout << "p.y:" << p.y << std::endl;
+			std::cout << "p.z:" << p.z << std::endl;
+		}
+
+		std::vector<double> weights;
+		double weight_sum = 0;
+		Transformation trans_res = { 0, 0, 0, 0, 0, 0 };
+
+		for (int k = 0; k < neighbors.size(); k++){
+			unsigned int index = neighbors[k];
+			double squared_dis = (cpoints[index].x - p.x)*(cpoints[index].x - p.x) + (cpoints[index].y - p.y)*(cpoints[index].y - p.y) + (cpoints[index].z - p.z)*(cpoints[index].z - p.z);
+
+			double weight_tem = exp(-squared_dis / (2.0f*INFLUENCE_RADIUS*INFLUENCE_RADIUS));
+			weights.push_back(weight_tem);
+			weight_sum += weight_tem;
+		}
+
+		//normalize the weight
+		for (int k = 0; k < weights.size(); k++){
+			weights[k] /= weight_sum;
+		}
+
+		//compute the new transformation
+		for (int k = 0; k < neighbors.size(); k++){
+			unsigned int index = neighbors[k];
+			trans_res.tx += weights[k] * ctfs[index].tx;
+			trans_res.ty += weights[k] * ctfs[index].ty;
+			trans_res.tz += weights[k] * ctfs[index].tz;
+			trans_res.ry += weights[k] * ctfs[index].ry;
+			trans_res.rz += weights[k] * ctfs[index].rz;
+			trans_res.rx += weights[k] * ctfs[index].rx;
+		}
+
+		ntfs.push_back(trans_res);
+	}
+
+	kd_eth.begin();
+	free(pointSet);
+	pointSet = NULL;
+}
+
+//void ITMMotionAnalysis::getAllOperationPointsTransformation(const std::vector<Vector3f> &points, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, std::vector<Transformation> &tfs){
+//	    
+//	    Vector3f *pointSet = (Vector3f*)malloc((cpoints.size())*sizeof(Vector3f));
+//		for (int i = 0; i < cpoints.size(); i++){
+//			pointSet[i].x = cpoints[i].x;
+//			pointSet[i].y = cpoints[i].y;
+//			pointSet[i].z = cpoints[i].z;
+//		}
+//
+//		KdTreeSearch_ETH kd_eth;
+//		kd_eth.add_vertex_set(pointSet, cpoints.size());
+//		kd_eth.end();
+//
+//		for (int i = 0; i < points.size(); i++){
+//			Vector3f p = points[i];
+//
+//			//get neighbor points within a range of radius
+//			std::vector<unsigned int> neighbors;
+//			//kd_eth.find_points_in_radius(p, INFLUENCE_RADIUS*INFLUENCE_RADIUS, neighbors); 
+//			kd_eth.find_closest_K_points(p, 1, neighbors);
+//
+//			if (neighbors.size() == 0){
+//				std::cout << "p.x:" << p.x << std::endl;
+//				std::cout << "p.y:" << p.y << std::endl;
+//				std::cout << "p.z:" << p.z << std::endl;
+//			}
+//
+//
+//			/*if (neighbors.size()==0){
+//				printf("neighbors.size()==0\n");
+//			}*/
+//			
+//			std::vector<double> weights;
+//			double weight_sum = 0;
+//			Transformation trans_res = { 0, 0, 0, 0, 0, 0 };
+//
+//			for (int k = 0; k < neighbors.size(); k++){
+//				unsigned int index = neighbors[k];
+//				double squared_dis = (cpoints[index].x - p.x)*(cpoints[index].x - p.x) + (cpoints[index].y - p.y)*(cpoints[index].y - p.y) + (cpoints[index].z - p.z)*(cpoints[index].z - p.z);
+//
+//				double weight_tem = exp(-squared_dis / (2.0f*INFLUENCE_RADIUS*INFLUENCE_RADIUS));
+//				weights.push_back(weight_tem);
+//				weight_sum += weight_tem;
+//			}
+//
+//			//normalize the weight
+//			for (int k = 0; k < weights.size(); k++){
+//				weights[k] /= weight_sum;
+//			}
+//
+//			//compute the new transformation
+//			for (int k = 0; k < neighbors.size(); k++){
+//				unsigned int index = neighbors[k];
+//				trans_res.tx += weights[k] * ctfs[index].tx;
+//				trans_res.ty += weights[k] * ctfs[index].ty;
+//				trans_res.tz += weights[k] * ctfs[index].tz;
+//				trans_res.ry += weights[k] * ctfs[index].ry;
+//				trans_res.rz += weights[k] * ctfs[index].rz;
+//				trans_res.rx += weights[k] * ctfs[index].rx;
+//			}
+//
+//			tfs.push_back(trans_res);
+//		}
+//
+//		kd_eth.begin();
+//		free(pointSet);
+//		pointSet = NULL;
+//
+//		if (useControlPoints){
+//			//transform control points
+//			for (int i = 0; i < cpoints.size(); i++){
+//				std::vector<float> rot, trans;
+//				Transformation2RotTrans(ctfs[i], rot, trans);
+//				cpoints[i] = TransformPoint(rot, trans, cpoints[i]);
+//				cnormals[i] = TransformNormal(rot, cnormals[i]);
+//			}
+//		}
+//
+//		//just for debug
+//		PointsIO::savePLYfile("cpoints.ply", cpoints, cnormals, Vector3u(255, 255, 0));
+//}
+
+//transform all points
+void ITMMotionAnalysis::transformAllPoints(std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals){
+	if (useControlPoints){
+		//transform control points
 		for (int i = 0; i < cpoints.size(); i++){
-			pointSet[i].x = cpoints[i].x;
-			pointSet[i].y = cpoints[i].y;
-			pointSet[i].z = cpoints[i].z;
+			std::vector<float> rot, trans;
+			Transformation2RotTrans(ctfs[i], rot, trans);
+			cpoints[i] = TransformPoint(rot, trans, cpoints[i]);
+			cnormals[i] = TransformNormal(rot, cnormals[i]);
 		}
-
-		KdTreeSearch_ETH kd_eth;
-		kd_eth.add_vertex_set(pointSet, cpoints.size());
-		kd_eth.end();
-
-		for (int i = 0; i < points.size(); i++){
-			Vector3f p = points[i];
-
-			//get neighbor points within a range of radius
-			std::vector<unsigned int> neighbors;
-			//kd_eth.find_points_in_radius(p, INFLUENCE_RADIUS*INFLUENCE_RADIUS, neighbors); 
-			kd_eth.find_closest_K_points(p, 1, neighbors);
-
-			if (neighbors.size() == 0){
-				std::cout << "p.x:" << p.x << std::endl;
-				std::cout << "p.y:" << p.y << std::endl;
-				std::cout << "p.z:" << p.z << std::endl;
-			}
-
-
-			/*if (neighbors.size()==0){
-				printf("neighbors.size()==0\n");
-			}*/
-			
-			std::vector<double> weights;
-			double weight_sum = 0;
-			Transformation trans_res = { 0, 0, 0, 0, 0, 0 };
-
-			for (int k = 0; k < neighbors.size(); k++){
-				unsigned int index = neighbors[k];
-				double squared_dis = (cpoints[index].x - p.x)*(cpoints[index].x - p.x) + (cpoints[index].y - p.y)*(cpoints[index].y - p.y) + (cpoints[index].z - p.z)*(cpoints[index].z - p.z);
-
-				double weight_tem = exp(-squared_dis / (2.0f*INFLUENCE_RADIUS*INFLUENCE_RADIUS));
-				weights.push_back(weight_tem);
-				weight_sum += weight_tem;
-			}
-
-			//normalize the weight
-			for (int k = 0; k < weights.size(); k++){
-				weights[k] /= weight_sum;
-			}
-
-			//compute the new transformation
-			for (int k = 0; k < neighbors.size(); k++){
-				unsigned int index = neighbors[k];
-				trans_res.tx += weights[k] * ctfs[index].tx;
-				trans_res.ty += weights[k] * ctfs[index].ty;
-				trans_res.tz += weights[k] * ctfs[index].tz;
-				trans_res.ry += weights[k] * ctfs[index].ry;
-				trans_res.rz += weights[k] * ctfs[index].rz;
-				trans_res.rx += weights[k] * ctfs[index].rx;
-			}
-
-			tfs.push_back(trans_res);
-		}
-
-		kd_eth.begin();
-		free(pointSet);
-		pointSet = NULL;
-
-		if (useControlPoints){
-			//transform control points
-			for (int i = 0; i < cpoints.size(); i++){
-				std::vector<float> rot, trans;
-				Transformation2RotTrans(ctfs[i], rot, trans);
-				cpoints[i] = TransformPoint(rot, trans, cpoints[i]);
-				cnormals[i] = TransformNormal(rot, cnormals[i]);
-			}
-		}
-
-		//just for debug
-		PointsIO::savePLYfile("cpoints.ply", cpoints, cnormals, Vector3u(255, 255, 0));
+	}
 }
 
 void ITMMotionAnalysis::Transformation2Matrix4(const Transformation &tf, Matrix4f &mtf){
@@ -309,4 +387,120 @@ void ITMMotionAnalysis::getNeighboorsOfEachNode(const std::vector<Vector3f> &cpo
 	kd_eth.begin();
 	free(pointSet);
 	pointSet = NULL;
+}
+
+bool ITMMotionAnalysis::invTransformation(const std::vector<float>& source_rot, const std::vector<float>& source_trans, std::vector<float>& target_rot, std::vector<float>& target_trans){
+	target_rot.resize(source_rot.size());
+	target_trans.resize(source_trans.size());
+	
+	float determinant = (source_rot[4] * source_rot[8] - source_rot[5] * source_rot[7])*source_rot[0] + (source_rot[5] * source_rot[6] - source_rot[3] * source_rot[8])*source_rot[1] + (source_rot[3] * source_rot[7] - source_rot[4] * source_rot[6])*source_rot[2];
+
+	if (determinant == 0) {
+		target_rot[0] = 0;
+		target_rot[1] = 0;
+		target_rot[2] = 0;
+		target_rot[3] = 0;
+		target_rot[4] = 0;
+		target_rot[5] = 0;
+		target_rot[6] = 0;
+		target_rot[7] = 0;
+		target_rot[8] = 0;
+
+		target_trans[0] = 0;
+		target_trans[1] = 0;
+		target_trans[2] = 0;
+		return false;
+	}
+
+	target_rot[0] = (source_rot[4] * source_rot[8] - source_rot[5] * source_rot[7]) / determinant;
+	target_rot[1] = (source_rot[2] * source_rot[7] - source_rot[1] * source_rot[8]) / determinant;
+	target_rot[2] = (source_rot[1] * source_rot[5] - source_rot[2] * source_rot[4]) / determinant;
+	target_rot[3] = (source_rot[5] * source_rot[6] - source_rot[3] * source_rot[8]) / determinant;
+	target_rot[4] = (source_rot[0] * source_rot[8] - source_rot[2] * source_rot[6]) / determinant;
+	target_rot[5] = (source_rot[2] * source_rot[3] - source_rot[0] * source_rot[5]) / determinant;
+	target_rot[6] = (source_rot[3] * source_rot[7] - source_rot[4] * source_rot[6]) / determinant;
+	target_rot[7] = (source_rot[1] * source_rot[6] - source_rot[0] * source_rot[7]) / determinant;
+	target_rot[8] = (source_rot[0] * source_rot[4] - source_rot[1] * source_rot[3]) / determinant;
+
+	target_trans[0] = -source_trans[0];
+	target_trans[1] = -source_trans[1];
+	target_trans[2] = -source_trans[2];
+
+	return true;
+	/*
+	target_rot.resize(source_rot.size());
+	target_trans.resize(source_trans.size());
+	
+	float tmp[12], src[16];
+	float det;
+
+	src[0] = source_rot[0];
+	src[1] = source_rot[1];
+	src[2] = source_rot[2];
+	src[3] = source_trans[0];
+	src[4] = source_rot[3];
+	src[5] = source_rot[4];
+	src[6] = source_rot[5];
+	src[7] = source_trans[1];
+	src[8] = source_rot[6];
+	src[9] = source_rot[7];
+	src[10] = source_rot[8];
+	src[11] = source_trans[2];
+	src[12] = 0;
+	src[13] = 0;
+	src[14] = 0;
+	src[15] = 1;
+
+	tmp[0] = src[10] * src[15];
+	tmp[1] = src[11] * src[14];
+	tmp[2] = src[9] * src[15];
+	tmp[3] = src[11] * src[13];
+	tmp[4] = src[9] * src[14];
+	tmp[5] = src[10] * src[13];
+	tmp[6] = src[8] * src[15];
+	tmp[7] = src[11] * src[12];
+	tmp[8] = src[8] * src[14];
+	tmp[9] = src[10] * src[12];
+	tmp[10] = src[8] * src[13];
+	tmp[11] = src[9] * src[12];
+
+	target_rot[0] = ((tmp[0] * src[5] + tmp[3] * src[6] + tmp[4] * src[7]) - (tmp[1] * src[5] + tmp[2] * src[6] + tmp[5] * src[7]));
+	target_rot[3] = ((tmp[1] * src[4] + tmp[6] * src[6] + tmp[9] * src[7]) - (tmp[0] * src[4] + tmp[7] * src[6] + tmp[8] * src[7]));
+	target_rot[6] = ((tmp[2] * src[4] + tmp[7] * src[5] + tmp[10] * src[7]) - (tmp[3] * src[4] + tmp[6] * src[5] + tmp[11] * src[7]));
+
+	det = src[0] * src[0] + src[1] * src[4] + src[2] * src[8] + src[3] * src[12];
+	if (det == 0.0f)
+		return false;
+
+	target_rot[0] /= det;
+	target_rot[3] /= det;
+	target_rot[6] /= det;
+
+	target_rot[1] = ((tmp[1] * src[1] + tmp[2] * src[2] + tmp[5] * src[3]) - (tmp[0] * src[1] + tmp[3] * src[2] + tmp[4] * src[3])) / det;
+	target_rot[4] = ((tmp[0] * src[0] + tmp[7] * src[2] + tmp[8] * src[3]) - (tmp[1] * src[0] + tmp[6] * src[2] + tmp[9] * src[3])) / det;
+	target_rot[7] = ((tmp[3] * src[0] + tmp[6] * src[1] + tmp[11] * src[3]) - (tmp[2] * src[0] + tmp[7] * src[1] + tmp[10] * src[3])) / det;
+
+	tmp[0] = src[2] * src[7];
+	tmp[1] = src[3] * src[6];
+	tmp[2] = src[1] * src[7];
+	tmp[3] = src[3] * src[5];
+	tmp[4] = src[1] * src[6];
+	tmp[5] = src[2] * src[5];
+	tmp[6] = src[0] * src[7];
+	tmp[7] = src[3] * src[4];
+	tmp[8] = src[0] * src[6];
+	tmp[9] = src[2] * src[4];
+	tmp[10] = src[0] * src[5];
+	tmp[11] = src[1] * src[4];
+
+	target_rot[2] = ((tmp[0] * src[13] + tmp[3] * src[14] + tmp[4] * src[15]) - (tmp[1] * src[13] + tmp[2] * src[14] + tmp[5] * src[15])) / det;
+	target_rot[5] = ((tmp[1] * src[12] + tmp[6] * src[14] + tmp[9] * src[15]) - (tmp[0] * src[12] + tmp[7] * src[14] + tmp[8] * src[15])) / det;
+	target_rot[8] = ((tmp[2] * src[12] + tmp[7] * src[13] + tmp[10] * src[15]) - (tmp[3] * src[12] + tmp[6] * src[13] + tmp[11] * src[15])) / det;
+
+
+	target_trans[0] = ((tmp[2] * src[10] + tmp[5] * src[11] + tmp[1] * src[9]) - (tmp[4] * src[11] + tmp[0] * src[9] + tmp[3] * src[10])) / det;
+	target_trans[1] = ((tmp[8] * src[11] + tmp[0] * src[8] + tmp[7] * src[10]) - (tmp[6] * src[10] + tmp[9] * src[11] + tmp[1] * src[8])) / det;
+	target_trans[2] = ((tmp[6] * src[9] + tmp[11] * src[11] + tmp[3] * src[8]) - (tmp[10] * src[11] + tmp[2] * src[8] + tmp[7] * src[9])) / det;
+
+	return true;*/
 }

@@ -241,6 +241,9 @@
     <ClCompile Include="Utils\KDtree\ETH_Kd_Tree\kdTree.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
+    <ClCompile Include="ITMLib\Utils\ITMRasterization.cpp">
+      <Filter>ITMLib\Utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\OpenNIEngine.h">
@@ -692,6 +695,9 @@
     </ClInclude>
     <ClInclude Include="Utils\KDtree\MyKDtree.h">
       <Filter>Utils\KDtree</Filter>
+    </ClInclude>
+    <ClInclude Include="ITMLib\Utils\ITMRasterization.h">
+      <Filter>ITMLib\Utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

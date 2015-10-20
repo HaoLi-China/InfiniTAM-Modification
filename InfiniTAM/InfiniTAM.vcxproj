@@ -137,6 +137,7 @@
     <ClCompile Include="ITMLib\Utils\ITMCalibIO.cpp" />
     <ClCompile Include="InfiniTAM.cpp" />
     <ClCompile Include="ITMLib\Objects\ITMPose.cpp" />
+    <ClCompile Include="ITMLib\Utils\ITMRasterization.cpp" />
     <ClCompile Include="Utils\FileUtils.cpp" />
     <ClCompile Include="Utils\KDtree\ANN\ANN.cpp" />
     <ClCompile Include="Utils\KDtree\ANN\bd_fix_rad_search.cpp" />
@@ -246,6 +247,7 @@
     <ClInclude Include="ITMLib\Objects\ITMViewHierarchyLevel.h" />
     <ClInclude Include="ITMLib\Objects\ITMLocalVBA.h" />
     <ClInclude Include="ITMLib\ITMLib.h" />
+    <ClInclude Include="ITMLib\Utils\ITMRasterization.h" />
     <ClInclude Include="ORUtils\Cholesky.h" />
     <ClInclude Include="ORUtils\CUDADefines.h" />
     <ClInclude Include="ORUtils\Image.h" />

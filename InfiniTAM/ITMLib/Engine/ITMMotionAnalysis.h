@@ -40,7 +40,6 @@ namespace ITMLib
 			const float INFLUENCE_RADIUS = 0.1;
 
 			void initialize(std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, std::vector<bool> &visiblelist);
-			void optimizeEnergyFunction(ITMFloatImage *newDepthImage);
 			void optimizeEnergyFunctionNlopt(ITMFloatImage *newDepthImage);
 			void getCalib(ITMRGBDCalib *&calib);
 			void getAllPoints(std::vector<Vector3f> &cpoints);
@@ -52,9 +51,13 @@ namespace ITMLib
 			void Transformation2RotTrans(const Transformation &tf, std::vector<float>& rot, std::vector<float>& trans); // get rotation and translation
 			Vector3f TransformPoint(const std::vector<float>& rot, const std::vector<float>& trans, const Vector3f& point); // transform point
 			Vector3f TransformNormal(const std::vector<float>& rot, const Vector3f& normal); // transform normal
+			bool invTransformation(const std::vector<float>& source_rot, const std::vector<float>& source_trans, std::vector<float>& target_rot, std::vector<float>& target_trans);//inverse transformation
+			
 			void RotTrans2Transformation(const std::vector<float>& rot, const std::vector<float>& trans, Transformation &tf); // get transformation
 			void Matrix42Transformation(const Matrix4f &mtf, Transformation &tf);
-			void getAllOperationPointsTransformation(const std::vector<Vector3f> &points, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, std::vector<Transformation> &tfs);
+			//void getAllOperationPointsTransformation(const std::vector<Vector3f> &points, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, std::vector<Transformation> &tfs);
+			void transformAllPoints(std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals);
+			void inferTransformations(const std::vector<Vector3f> &cpoints, const std::vector<Transformation> &ctfs, const std::vector<Vector3f> &npoints, std::vector<Transformation> &ntfs);
 			
 			bool changeDpWhenIteration;
 			int findDepthPointsPolicy;
@@ -81,12 +84,6 @@ namespace ITMLib
 			void updateAllWarpInfo(double *x);
 			void updateAllWarpInfo(const std::vector<double>& x);
 			void findNeighborsInDepthMap(int x, int y, int scale, std::vector<Vector2i> &pos_s);
-
-			//float computeDataTerm(const lbfgsfloatval_t* x);
-			//float computeRegTerm(const lbfgsfloatval_t* x);
-
-			//double computeDataTerm();
-			//double computeRegTerm();
 
 			ITMMotionAnalysis* malys;
 
