@@ -113,7 +113,8 @@ void ImageFileEngine::getImages(ITMUChar4Image *rgbImage, ITMShortImage *rawDept
 		{
 			ushort depthPix = depth_buffer[i];
 			//depth[i] = (depthPix >= nDepthMinReliableDistance) && (depthPix <= nDepthMaxDistance) ? (short)depthPix : -1;
-			depth[i] = (depthPix >= nDepthMinReliableDistance) && (depthPix <= nDepthMaxDistance) && ((i % depth_width) >= (depth_width / 4)) && ((i % depth_width) <= (depth_width * 3 / 4)) ? (short)depthPix : -1;
+			//depth[i] = (depthPix >= nDepthMinReliableDistance) && (depthPix <= nDepthMaxDistance) && ((i % depth_width) >= (depth_width / 4)) && ((i % depth_width) <= (depth_width * 3 / 4)) ? (short)depthPix : -1;
+			depth[i] = (depthPix >= nDepthMinReliableDistance) && (depthPix <= 1600) && ((i % depth_width) >= (depth_width / 4)) && ((i % depth_width) <= (depth_width * 3 / 4)) && ((i / depth_width) <= (depth_height * 3 / 5)) ? (short)depthPix : -1;
 		}
 		delete[]depth_buffer;
 	}

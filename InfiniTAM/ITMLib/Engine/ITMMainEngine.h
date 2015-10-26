@@ -128,6 +128,7 @@ namespace ITMLib
 
 			void updateAccumTfs(std::vector<Transformation> &accumTfs, const std::vector<Transformation> &ctfs);
 			void getAllSurfacePoints(std::vector<Vector3f> &sur_points, std::vector<Vector3f> &sur_normals, const bool withNormals = false);//Hao added it
+			void getAllMeshPoints(std::vector<Vector3f> &mesh_points, std::vector<Vector3f> &mesh_normals);//Hao added it
 			void getAllVoxelCenters(std::vector<Vector3f> &points, std::vector<short> &sdf_s, std::vector<uchar> &w_s);//Hao added it
 			void getNewControlPoints(const std::vector<Vector3f> &uspoints, const std::vector<Vector3f> &usnormals, std::vector<Vector3f> &ncpoints, std::vector<Vector3f> &ncnormals);//Hao added it
 			void updateControlPoints(const std::vector<Vector3f> &sur_points, const std::vector<Vector3f> &sur_normals, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals);//Hao added it
@@ -136,8 +137,9 @@ namespace ITMLib
 			void getLivePoints(const std::vector<Vector3f> &cpoints, const std::vector<Transformation> &accumTfs, const float* depth, std::vector<Vector3f> &live_points);//Hao added it
 			void allocateNewVoxels(const std::vector<Vector3f> &live_points);//Hao added it
 			void getTransformedControlPoints(std::vector<Vector3f> &tcpoints, std::vector<Vector3f> &tcnormals);//Hao added it
-			void getVisibleControlPoints(const std::vector<Vector3f> &tcpoints, std::vector<bool> &visiblelist);//Hao added it
-			
+			//void getVisibleControlPoints(const std::vector<Vector3f> &tcpoints, std::vector<bool> &visiblelist);//Hao added it
+			void getVisiblePoints(const std::vector<Vector3f> &tcpoints, std::vector<bool> &visiblelist, std::vector<std::vector<unsigned int>> &visibleNeighbors, std::vector<Vector3f> &visiblePoints, std::vector<Vector3f> &visibleNormals);//Hao added it
+
 			void saveSurfacePoints(const std::string &filename);//Hao added it
 
 			static void saveSDFs(const ITMScene<ITMVoxel, ITMVoxelIndex> *scene, const ITMRenderState *renderState, const std::string &filename);// Hao added it,just for debug
@@ -145,7 +147,9 @@ namespace ITMLib
 			void findNeighborsInDepthMap(int x, int y, int scale, std::vector<Vector2i> &pos_s);
 
 			Vector2i trackedImageSize;//Hao added it
-			const float CP_RESOLUTION = 0.025;//Hao added it
+			//const float CP_RESOLUTION = 0.025;//Hao added it
+			const float CP_RESOLUTION = 0.05;//Hao added it
+			//const float CP_RESOLUTION = 2;//Hao added it
 			const float INFLUENCE_RADIUS = 0.03;//Hao added it
 			std::vector<Vector3f> cpoints;
 			std::vector<Vector3f> cnormals;

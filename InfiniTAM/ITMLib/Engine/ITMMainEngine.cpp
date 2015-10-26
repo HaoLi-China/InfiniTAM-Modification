@@ -138,6 +138,10 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 		std::vector<Vector3f> tcnormals;
 		std::vector<bool> visiblelist;// visiblelist size = cpoints size
 
+		std::vector<std::vector<unsigned int>> visibleNeighbors;
+		std::vector<Vector3f> visiblePoints;
+		std::vector<Vector3f> visibleNormals;
+
 		//testSamePosControlPoints(cpoints);//just for debug
 
 		if (settings->useControlPoints && cpoints.size() > 0){
@@ -146,22 +150,19 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 			color[1] = rand()*1.0f / float(RAND_MAX);
 			color[2] = rand()*1.0f / float(RAND_MAX);
 			color_vec.push_back(color);
-			printf("aaaaaa\n");
+			
 			getTransformedControlPoints(tcpoints, tcnormals);
-			printf("bbbbbb\n");
-			getVisibleControlPoints(tcpoints, visiblelist);
-			printf("cccccc\n");
+			getVisiblePoints(tcpoints, visiblelist, visibleNeighbors, visiblePoints, visibleNormals);
 			cpoints_vec.push_back(tcpoints);
 
-			motionAnalysis->initialize(tcpoints, tcnormals, visiblelist);
-			motionAnalysis->optimizeEnergyFunctionNlopt(view->depth);
+			motionAnalysis->initialize(tcpoints, tcnormals, visiblelist, visibleNeighbors);
+			motionAnalysis->optimizeEnergyFunctionNlopt(view->depth, visiblePoints, visibleNormals);
 			
 			//transform
 			std::vector<Transformation> ctfs;
 			motionAnalysis->getAllTransformations(ctfs);
 			updateAccumTfs(accumTfs, ctfs);
 			ctfs_vec.push_back(ctfs);
-			printf("dddddd\n");
 		}
 
 		// fusion
@@ -170,27 +171,24 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 		float *depth_device = view->depth->GetData(MEMORYDEVICE_CUDA);
 		float *depth = (float*)malloc(depth_image_width*depth_image_height * sizeof(float));
 		ITMSafeCall(cudaMemcpy(depth, depth_device, (depth_image_width * depth_image_height)*sizeof(float), cudaMemcpyDeviceToHost));
-		printf("eeeeee\n");
 		std::vector<Vector3f> live_points;
 		getLivePoints(cpoints, accumTfs, depth, live_points);
-		printf("ffffff\n");
 		allocateNewVoxels(live_points);
-		printf("gggggg\n");
 		getAllVoxelCenters(voxel_centers, sdf_s, w_s);
 		transformAllVoxelCenters(cpoints, accumTfs, voxel_centers);
 		integrateIntoCanonicalModel(voxel_centers, depth, sdf_s, w_s);
-		printf("hhhhhh\n");
 		free(depth);
 		depth = NULL;
 
 		//use control nodes
 		if (settings->useControlPoints){
 			//matching cube to get mesh of canonical model
-			UpdateMesh(); printf("iiiiii\n");
+			UpdateMesh();
 			//get surface points of canonical model
-			getAllSurfacePoints(sur_points, sur_normals, true); printf("jjjjjj\n");
+			//getAllSurfacePoints(sur_points, sur_normals, true);
+			getAllMeshPoints(sur_points, sur_normals);
 			//get control points on the surface
-			updateControlPoints(sur_points, sur_normals, cpoints, cnormals); printf("kkkkkk\n");
+			updateControlPoints(sur_points, sur_normals, cpoints, cnormals);
 		}
 	}
 	else{
@@ -324,6 +322,33 @@ void ITMMainEngine::updateAccumTfs(std::vector<Transformation> &accumTfs, const 
 			motionAnalysis->RotTrans2Transformation(global_rot, global_trans, accumTfs[i]);
 		}
 	}
+}
+
+//get all points on mesh
+void ITMMainEngine::getAllMeshPoints(std::vector<Vector3f> &mesh_points, std::vector<Vector3f> &mesh_normals){
+	mesh_points.clear();
+	mesh_normals.clear();
+
+	ITMMesh::Triangle *triangles = NULL;
+	mesh->getCpuTriangles(triangles);
+	int noTriangles = mesh->noTotalTriangles;
+
+	for (int i = 0; i < noTriangles; i++){
+		 Vector3f pt = (triangles[i].p0 + triangles[i].p1 + triangles[i].p2) / 3;
+		 Vector3f vec0 = triangles[i].p1 - triangles[i].p0;
+		 Vector3f vec1 = triangles[i].p2 - triangles[i].p1;
+		 Vector3f nor;
+		 nor.x = vec0.y*vec1.z - vec0.z*vec1.y;
+		 nor.y = vec0.z*vec1.x - vec0.x*vec1.z;
+		 nor.z = vec0.x*vec1.y - vec0.y*vec1.x;
+		 nor = -nor.normalised();
+
+		 mesh_points.push_back(pt);
+		 mesh_normals.push_back(nor);
+	}
+
+	free(triangles);
+	triangles = NULL;
 }
 
 //Hao added it: update control points
@@ -485,7 +510,7 @@ void ITMMainEngine::getAllSurfacePoints(std::vector<Vector3f> &points, std::vect
 				ITMVoxel res = voxels[(hashEntry.ptr * SDF_BLOCK_SIZE3) + j];
 
 				float value = ITMVoxel::SDF_valueToFloat(res.sdf);
-				if (value<5 * mu&&value>-5 * mu){ //mu=0.02
+				if (value<10 * mu&&value>-10 * mu){ //mu=0.02
 					Vector3f p;
 					float voxelSize = 0.125f;
 					float blockSizeWorld = scene->sceneParams->voxelSize*SDF_BLOCK_SIZE; // = 0.005*8;
@@ -726,6 +751,27 @@ void ITMMainEngine::getLivePoints(const std::vector<Vector3f> &cpoints, const st
 	const std::vector<Vector3f> nors;
 	PointsIO::savePLYfile("live_pointsa.ply", live_points, nors, Vector3u(255, 0, 0));
 
+	////just for test
+	//std::vector<Vector3f> live_points_tem = live_points;
+	//PointsIO::savePLYfile("live_points1.ply", live_points_tem, nors, Vector3u(255, 0, 0));
+
+	//Transformation tf_tem = {0.2, 0.1, 0.5, 0.03, 0.04, 0.02};
+	//std::vector<float> source_rot, source_trans;
+	//motionAnalysis->Transformation2RotTrans(tf_tem, source_rot, source_trans);
+	//std::vector<float> target_rot, target_trans;
+	//motionAnalysis->invTransformation(source_rot, source_trans, target_rot, target_trans);
+
+	//for (int k = 0; k < live_points_tem.size(); k++){
+	//	live_points_tem[k] = motionAnalysis->TransformPoint(source_rot, source_trans, live_points_tem[k]);
+	//}
+	//PointsIO::savePLYfile("live_points2.ply", live_points_tem, nors, Vector3u(0, 255, 0));
+
+	//for (int k = 0; k < live_points_tem.size(); k++){
+	//	live_points_tem[k] = motionAnalysis->TransformNormal(target_rot, live_points_tem[k] + Vector3f(target_trans[0], target_trans[1], target_trans[2]));
+	//}
+	//PointsIO::savePLYfile("live_points3.ply", live_points_tem, nors, Vector3u(0, 0, 255));
+
+
 	if (cpoints.size() == 0){
 		return;
 	}
@@ -944,8 +990,10 @@ void ITMMainEngine::allocateNewVoxels(const std::vector<Vector3f> &live_points){
 }
 
 //Hao added it: Get Visible Control Points
-void ITMMainEngine::getVisibleControlPoints(const std::vector<Vector3f> &tcpoints, std::vector<bool> &visiblelist){
+void ITMMainEngine::getVisiblePoints(const std::vector<Vector3f> &tcpoints, std::vector<bool> &visiblelist, std::vector<std::vector<unsigned int>> &visibleNeighbors, std::vector<Vector3f> &visiblePoints, std::vector<Vector3f> &visibleNormals){
 	visiblelist.clear();
+	visiblePoints.clear();
+	visibleNormals.clear();
 
 	ITMRGBDCalib *calib = NULL;
 	motionAnalysis->getCalib(calib);
@@ -956,7 +1004,7 @@ void ITMMainEngine::getVisibleControlPoints(const std::vector<Vector3f> &tcpoint
 	ITMMesh::Triangle *triangles = NULL;
 	mesh->getCpuTriangles(triangles);
 	int noTriangles = mesh->noTotalTriangles;
-	printf("111111\n");
+	
 	std::vector<Vector3f> allTriPoints;
 	for (int i = 0; i < noTriangles; i++){
 		allTriPoints.push_back(triangles[i].p0);
@@ -966,24 +1014,28 @@ void ITMMainEngine::getVisibleControlPoints(const std::vector<Vector3f> &tcpoint
 
 	std::vector<Transformation> ntfs;
 	motionAnalysis->inferTransformations(cpoints, accumTfs, allTriPoints, ntfs);
-	printf("222222\n");
+	
 	for (int i = 0; i < ntfs.size(); i++){
 		std::vector<float> rot, trans;
 		motionAnalysis->Transformation2RotTrans(ntfs[i], rot, trans);
 
 		allTriPoints[i] = motionAnalysis->TransformPoint(rot, trans, allTriPoints[i]);
 	}
-	printf("333333\n");
+
+	PointsIO::savePLYfile("allTriPoints.ply", allTriPoints, visibleNormals, Vector3u(0, 0, 255));
+	
 	for (int i = 0; i < noTriangles; i++){
 		triangles[i].p0 = allTriPoints[3 * i];
 		triangles[i].p1 = allTriPoints[3 * i + 1];
 		triangles[i].p2 = allTriPoints[3 * i + 2];
 	}
-	printf("444444\n");
+	
 	float *depthImage = NULL;
+	Vector3f *normalMap = NULL;
 	rasterization.render(triangles, noTriangles);
 	rasterization.getDepthImage(depthImage);
-	printf("555555\n");
+	rasterization.getNormals(normalMap);
+	
 	free(triangles);
 	triangles = NULL;
 
@@ -991,16 +1043,6 @@ void ITMMainEngine::getVisibleControlPoints(const std::vector<Vector3f> &tcpoint
 		visiblelist.push_back(false);
 	}
 
-	////debug
-	//int count1 = 0;
-	//for (int i = 0; i < imgSize.x*imgSize.y; i++){
-	//	if (depthImage[i] == 0){
-	//		count1++;
-	//	}
-	//}
-	//std::cout << "count1:" << count1 << std::endl;
-
-	std::vector<Vector3f> tem_pts;
 	for (int y = 0; y < imgSize.y; y++){
 		for (int x = 0; x < imgSize.x; x++){
 			int id = imgSize.x * y + x;
@@ -1010,55 +1052,88 @@ void ITMMainEngine::getVisibleControlPoints(const std::vector<Vector3f> &tcpoint
 				pt.x = pt.z * ((float(x) - projParams_d.z) * 1.0 / projParams_d.x);
 				pt.y = pt.z * ((float(y) - projParams_d.w) * 1.0 / projParams_d.y);
 
-				tem_pts.push_back(pt);
+				visiblePoints.push_back(pt);
+				visibleNormals.push_back(normalMap[id]);
 			}
 		}
 	}
-	const std::vector<Vector3f> nors;
-	PointsIO::savePLYfile("tem_points.ply", tem_pts, nors, Vector3u(0, 0, 255));
 
-	for (int i = 0; i < tcpoints.size(); i++){
-		Vector3f pt_camera = tcpoints[i];
-		Vector2f pt_image;
+	PointsIO::savePLYfile("visiblePoints.ply", visiblePoints, visibleNormals, Vector3u(0, 0, 255));
 
-		// project point into image
-		if (pt_camera.z <= 0) continue;
 
-		pt_image.x = projParams_d.x * pt_camera.x / pt_camera.z + projParams_d.z;
-		pt_image.y = projParams_d.y * pt_camera.y / pt_camera.z + projParams_d.w;
-
-		int x = (int)(pt_image.x + 0.5f);
-		int y = (int)(pt_image.y + 0.5f);
-
-		if ((x < 0) || (x > imgSize.x - 1) || (y < 1) || (y > imgSize.y - 1)) continue;
-
-		std::vector<Vector2i> pos_s;
-		findNeighborsInDepthMap(x, y, 3, pos_s);
-
-		for (int k = 0; k < pos_s.size(); k++){
-			int index = pos_s[k].y * imgSize.x + pos_s[k].x;
-			if (std::abs(depthImage[index] - pt_camera.z) < 2*scene->sceneParams->voxelSize){
-				visiblelist[i] = true;
-				break;
-			}
-		}
+	Vector3f *pointSet = (Vector3f*)malloc((visiblePoints.size())*sizeof(Vector3f));
+	for (int i = 0; i < visiblePoints.size(); i++){
+		pointSet[i].x = visiblePoints[i].x;
+		pointSet[i].y = visiblePoints[i].y;
+		pointSet[i].z = visiblePoints[i].z;
 	}
-	
-	std::vector<Vector3f> vpts;
-	std::vector<Vector3f> nvpts;//debug
+
+	KdTreeSearch_ETH kd_eth;
+	kd_eth.add_vertex_set(pointSet, visiblePoints.size());
+	kd_eth.end();
+
+	std::vector<unsigned int> neighbors;
 	for (int i = 0; i < tcpoints.size(); i++){
-		if (visiblelist[i]){
-			vpts.push_back(tcpoints[i]);
+		Vector3f p = tcpoints[i];
+		std::vector<unsigned int> neighbors;
+		kd_eth.find_points_in_radius(p, 0.0004, neighbors);
+		//kd_eth.find_points_in_radius(p, 4, neighbors);
+
+		if (neighbors.size() > 2){
+			visiblelist[i] = true;
+			visibleNeighbors.push_back(neighbors);
 		}
 		else{
-			nvpts.push_back(tcpoints[i]);
+			visiblelist[i] = false;
 		}
 	}
-	printf("666666\n");
-	//const std::vector<Vector3f> nors;
-	PointsIO::savePLYfile("tcpoints.ply", tcpoints, nors, Vector3u(0, 0, 255));
-	PointsIO::savePLYfile("vpts.ply", vpts, nors, Vector3u(0, 255, 0));
-	PointsIO::savePLYfile("nvpts.ply", nvpts, nors, Vector3u(255, 0, 0));
+
+	kd_eth.begin();
+	free(pointSet);
+	pointSet = NULL;
+
+	//for (int i = 0; i < tcpoints.size(); i++){
+	//	Vector3f pt_camera = tcpoints[i];
+	//	Vector2f pt_image;
+
+	//	// project point into image
+	//	if (pt_camera.z <= 0) continue;
+
+	//	pt_image.x = projParams_d.x * pt_camera.x / pt_camera.z + projParams_d.z;
+	//	pt_image.y = projParams_d.y * pt_camera.y / pt_camera.z + projParams_d.w;
+
+	//	int x = (int)(pt_image.x + 0.5f);
+	//	int y = (int)(pt_image.y + 0.5f);
+
+	//	if ((x < 0) || (x > imgSize.x - 1) || (y < 1) || (y > imgSize.y - 1)) continue;
+
+	//	std::vector<Vector2i> pos_s;
+	//	findNeighborsInDepthMap(x, y, 3, pos_s);
+
+	//	for (int k = 0; k < pos_s.size(); k++){
+	//		int index = pos_s[k].y * imgSize.x + pos_s[k].x;
+	//		if (std::abs(depthImage[index] - pt_camera.z) < 2*scene->sceneParams->voxelSize){
+	//			visiblelist[i] = true;
+	//			break;
+	//		}
+	//	}
+	//}
+	
+	//std::vector<Vector3f> vpts;
+	//std::vector<Vector3f> nvpts;//debug
+	//for (int i = 0; i < tcpoints.size(); i++){
+	//	if (visiblelist[i]){
+	//		vpts.push_back(tcpoints[i]);
+	//	}
+	//	else{
+	//		nvpts.push_back(tcpoints[i]);
+	//	}
+	//}
+	//
+	////const std::vector<Vector3f> nors;
+	//PointsIO::savePLYfile("tcpoints.ply", tcpoints, nors, Vector3u(0, 0, 255));
+	//PointsIO::savePLYfile("vpts.ply", vpts, nors, Vector3u(0, 255, 0));
+	//PointsIO::savePLYfile("nvpts.ply", nvpts, nors, Vector3u(255, 0, 0));
 }
 
 //just for debug

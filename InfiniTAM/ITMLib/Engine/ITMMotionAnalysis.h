@@ -39,14 +39,15 @@ namespace ITMLib
 			//const float INFLUENCE_RADIUS = sqrt(0.04*0.04*3);
 			const float INFLUENCE_RADIUS = 0.1;
 
-			void initialize(std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, std::vector<bool> &visiblelist);
-			void optimizeEnergyFunctionNlopt(ITMFloatImage *newDepthImage);
+			void initialize(std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, std::vector<bool> &visiblelist, std::vector<std::vector<unsigned int>> visibleNeighbors);
+			void optimizeEnergyFunctionNlopt(ITMFloatImage *newDepthImage, const std::vector<Vector3f> &visiblePoints, const std::vector<Vector3f> &visibleNormals);
 			void getCalib(ITMRGBDCalib *&calib);
 			void getAllPoints(std::vector<Vector3f> &cpoints);
 			void getAllNormals(std::vector<Vector3f> &cnormals);
 			void getAllTransformations(std::vector<Transformation> &ctfs);
 			void setAllTransformations(const std::vector<Transformation> &ctfs);
 			void getAllVisibleList(std::vector<bool> &visiblelist);
+			void getVisibleNeighbors(std::vector<std::vector<unsigned int>> &visibleNeighbors);
 			void Transformation2Matrix4(const Transformation &tf, Matrix4f &mtf);
 			void Transformation2RotTrans(const Transformation &tf, std::vector<float>& rot, std::vector<float>& trans); // get rotation and translation
 			Vector3f TransformPoint(const std::vector<float>& rot, const std::vector<float>& trans, const Vector3f& point); // transform point
@@ -55,10 +56,12 @@ namespace ITMLib
 			
 			void RotTrans2Transformation(const std::vector<float>& rot, const std::vector<float>& trans, Transformation &tf); // get transformation
 			void Matrix42Transformation(const Matrix4f &mtf, Transformation &tf);
-			//void getAllOperationPointsTransformation(const std::vector<Vector3f> &points, std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, std::vector<Transformation> &tfs);
 			void transformAllPoints(std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals);
 			void inferTransformations(const std::vector<Vector3f> &cpoints, const std::vector<Transformation> &ctfs, const std::vector<Vector3f> &npoints, std::vector<Transformation> &ntfs);
 			
+			void updateTransformation(Transformation &step, Transformation &oldTransformation, Transformation &newTransformation);
+			Vector3f interpolateBilinear(const std::vector<Vector3f> &source, const Vector2f & position, const Vector2i &imgSize);
+
 			bool changeDpWhenIteration;
 			int findDepthPointsPolicy;
 
@@ -68,6 +71,7 @@ namespace ITMLib
 			std::vector<Vector3f> cnormals;
 			std::vector<Transformation> ctfs;
 			std::vector<bool> visiblelist;// visiblelist size = cpoints size
+			std::vector<std::vector<unsigned int>> visibleNeighbors;
 
 			bool useControlPoints;
 
@@ -76,9 +80,9 @@ namespace ITMLib
 
 		struct MotionsData
 		{
-			MotionsData(ITMMotionAnalysis *motionAnalysis, float *depth, int depth_width, int depth_height);
+			MotionsData(ITMMotionAnalysis *motionAnalysis, float *depth, int depth_width, int depth_height, const std::vector<Vector3f> &visiblePoints, const std::vector<Vector3f> &visibleNormals);
 			void updatePointsNormals();  // using new warp transformations to compute the points and normals of canonical model
-			void computeDpoints(const float *depth, const std::vector<double>& x, std::vector<Vector3f> &dps);  // compute corresponding points of depth image
+			void computeDpoints(const float *depth, const std::vector<double>& x, std::vector<Vector3f> &cdps, std::vector<Vector3f> &dps, const float disThreshold);  // compute corresponding points of depth image
 			void updateAllWarpInfo(double *x);
 			void updateAllWarpInfo(const std::vector<double>& x);
 			void findNeighborsInDepthMap(int x, int y, int scale, std::vector<Vector2i> &pos_s);
@@ -88,15 +92,18 @@ namespace ITMLib
 			std::vector<Vector3f> points; // n, canonical model points
 			std::vector<Vector3f> normals; // n, canonical model normals
 			std::vector<Vector3f> dpoints; // depth image points
+			std::vector<Vector3f> cdpoints; // depth image points
 			std::vector<Vector3f> vpoints; // visible points
 			std::vector<Vector3f> vnormals; // visible points' normals
 			std::vector<int> visibles; // n, visible nodes
 			std::vector<bool> livelist; // n, live nodes
 			std::vector<double> x0; // 6 * n warp transformations, n represents all nodes
+			std::vector<Vector3f> visiblePoints;
+			std::vector<Vector3f> visibleNormals;
+			std::vector<std::vector<unsigned int>> visible_neighbors;
 
 			std::vector<std::vector<unsigned int>> neighborhood;  // n, neighbor nodes of each node
-			std::vector<std::vector<unsigned int>> valid_neighborhood;  // visible neighbor nodes of each invisible node
-
+	
 			float alfa;
 			float beta;
 			float lambda;
@@ -105,6 +112,8 @@ namespace ITMLib
 			int depth_image_height;
 
 			float *depth;
+
+			bool rotationOnly;
 		};
 	}
 }

@@ -6,17 +6,25 @@ ITMRasterization::ITMRasterization(ITMRGBDCalib *calib, Vector2i imageSize){
 	this->calib = calib;
 	this->imageSize = imageSize;
 	depthMap = (float *)malloc(imageSize.x * imageSize.y * sizeof(float));
+	normalMap = (Vector3f *)malloc(imageSize.x * imageSize.y * sizeof(Vector3f));
 	memset(depthMap, 0, imageSize.x * imageSize.y * sizeof(float));
+	memset(normalMap, 0, imageSize.x * imageSize.y * sizeof(Vector3f));
 }
 
 ITMRasterization::~ITMRasterization(){
 	free(depthMap);
+	free(normalMap);
 	depthMap = NULL;
+	normalMap = NULL;
 }
 
 // get rendered depth image
 void ITMRasterization::getDepthImage(float *&depthMap){
 	depthMap = this->depthMap;
+}
+
+void ITMRasterization::getNormals(Vector3f *&normalMap){
+	normalMap = this->normalMap;
 }
 
 // get size of image
@@ -46,6 +54,14 @@ void ITMRasterization::render(const ITMMesh::Triangle *triangles, const int noTr
 		Vector3f p0 = triangles[i].p0;
 		Vector3f p1 = triangles[i].p1;
 		Vector3f p2 = triangles[i].p2;
+
+		Vector3f vec0 = p1 - p0;
+		Vector3f vec1 = p2 - p1;
+		Vector3f nor;
+		nor.x = vec0.y*vec1.z - vec0.z*vec1.y;
+		nor.y = vec0.z*vec1.x - vec0.x*vec1.z;
+		nor.z = vec0.x*vec1.y - vec0.y*vec1.x;
+		nor = -nor.normalised();
 
 		Vector2f v0;
 		Vector2f v1;
@@ -89,6 +105,7 @@ void ITMRasterization::render(const ITMMesh::Triangle *triangles, const int noTr
 
 					if (depthMap[y * imgSize.x + x]==0 || z < depthMap[y * imgSize.x + x]) {
 						depthMap[y * imgSize.x + x] = z;
+						normalMap[y * imgSize.x + x] = nor;
 					}
 				}
 			}

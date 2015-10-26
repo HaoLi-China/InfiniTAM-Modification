@@ -19,14 +19,15 @@ ITMMotionAnalysis::~ITMMotionAnalysis(){
 	
 }
 
-void ITMMotionAnalysis::initialize(std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, std::vector<bool> &visiblelist){
+void ITMMotionAnalysis::initialize(std::vector<Vector3f> &cpoints, std::vector<Vector3f> &cnormals, std::vector<bool> &visiblelist, std::vector<std::vector<unsigned int>> visibleNeighbors){
 	this->cpoints = cpoints;
 	this->cnormals = cnormals;
 	this->visiblelist = visiblelist;
+	this->visibleNeighbors = visibleNeighbors;
 
 	ctfs.clear();
 	for (int i = 0; i < cpoints.size(); i++){
-		Transformation tf = {0, 0, 0, 0, 0, 0};
+		Transformation tf = { 0, 0, 0, 0, 0, 0 };
 		ctfs.push_back(tf);
 	}
 }
@@ -53,6 +54,10 @@ void ITMMotionAnalysis::setAllTransformations(const std::vector<Transformation> 
 
 void ITMMotionAnalysis::getAllVisibleList(std::vector<bool> &visiblelist){
 	visiblelist = this->visiblelist;
+}
+
+void ITMMotionAnalysis::getVisibleNeighbors(std::vector<std::vector<unsigned int>> &visibleNeighbors){
+	visibleNeighbors = this->visibleNeighbors;
 }
 
 //infer transformation of new points
@@ -420,4 +425,85 @@ bool ITMMotionAnalysis::invTransformation(const std::vector<float>& source_rot, 
 	target_trans[2] = ((tmp[6] * src[9] + tmp[11] * src[11] + tmp[3] * src[8]) - (tmp[10] * src[11] + tmp[2] * src[8] + tmp[7] * src[9])) / det;
 
 	return true;*/
+}
+
+
+//upadate transformation
+void ITMMotionAnalysis::updateTransformation(Transformation &step, Transformation &oldTransformation, Transformation &newTransformation){
+	std::vector<float> global_rot, new_rot;
+	std::vector<float> global_trans, new_trans;
+	Transformation2RotTrans(oldTransformation, global_rot, global_trans);
+	Transformation2RotTrans(step, new_rot, new_trans);
+
+	float r00 = new_rot[0] * global_rot[0] + new_rot[1] * global_rot[3] + new_rot[2] * global_rot[6];
+	float r01 = new_rot[0] * global_rot[1] + new_rot[1] * global_rot[4] + new_rot[2] * global_rot[7];
+	float r02 = new_rot[0] * global_rot[2] + new_rot[1] * global_rot[5] + new_rot[2] * global_rot[8];
+
+	float r10 = new_rot[3] * global_rot[0] + new_rot[4] * global_rot[3] + new_rot[5] * global_rot[6];
+	float r11 = new_rot[3] * global_rot[1] + new_rot[4] * global_rot[4] + new_rot[5] * global_rot[7];
+	float r12 = new_rot[3] * global_rot[2] + new_rot[4] * global_rot[5] + new_rot[5] * global_rot[8];
+
+	float r20 = new_rot[6] * global_rot[0] + new_rot[7] * global_rot[3] + new_rot[8] * global_rot[6];
+	float r21 = new_rot[6] * global_rot[1] + new_rot[7] * global_rot[4] + new_rot[8] * global_rot[7];
+	float r22 = new_rot[6] * global_rot[2] + new_rot[7] * global_rot[5] + new_rot[8] * global_rot[8];
+
+	float t0 = new_rot[0] * global_trans[0] + new_rot[1] * global_trans[1] + new_rot[2] * global_trans[2];
+	float t1 = new_rot[3] * global_trans[0] + new_rot[4] * global_trans[1] + new_rot[5] * global_trans[2];
+	float t2 = new_rot[6] * global_trans[0] + new_rot[7] * global_trans[1] + new_rot[8] * global_trans[2];
+
+	t0 += new_trans[0];
+	t1 += new_trans[1];
+	t2 += new_trans[2];
+
+	global_rot[0] = r00;
+	global_rot[1] = r01;
+	global_rot[2] = r02;
+
+	global_rot[3] = r10;
+	global_rot[4] = r11;
+	global_rot[5] = r12;
+
+	global_rot[6] = r20;
+	global_rot[7] = r21;
+	global_rot[8] = r22;
+
+	global_trans[0] = t0;
+	global_trans[1] = t1;
+	global_trans[2] = t2;
+
+	RotTrans2Transformation(global_rot, global_trans, newTransformation);
+}
+
+Vector3f ITMMotionAnalysis::interpolateBilinear(const std::vector<Vector3f> &source, const Vector2f & position, const Vector2i &imgSize){
+	Vector3f a, b, c, d;
+	Vector3f result;
+	Vector2s p;
+	Vector2f delta;
+
+	p.x = (short)floor(position.x);
+	p.y = (short)floor(position.y);
+	delta.x = position.x - (float)p.x;
+	delta.y = position.y - (float)p.y;
+
+	a = source[p.x + p.y * imgSize.x];
+	b = source[(p.x + 1) + p.y * imgSize.x];
+	c = source[p.x + (p.y + 1) * imgSize.x];
+	d = source[(p.x + 1) + (p.y + 1) * imgSize.x];
+
+	if (a.z < 0 || b.z < 0 || c.z < 0 || d.z < 0)
+	{
+		result.x = 0;
+		result.y = 0;
+		result.z = -1.0f;
+		return result;
+	}
+
+	result.x = ((float)a.x * (1.0f - delta.x) * (1.0f - delta.y) + (float)b.x * delta.x * (1.0f - delta.y) +
+		(float)c.x * (1.0f - delta.x) * delta.y + (float)d.x * delta.x * delta.y);
+	result.y = ((float)a.y * (1.0f - delta.x) * (1.0f - delta.y) + (float)b.y * delta.x * (1.0f - delta.y) +
+		(float)c.y * (1.0f - delta.x) * delta.y + (float)d.y * delta.x * delta.y);
+	result.z = ((float)a.z * (1.0f - delta.x) * (1.0f - delta.y) + (float)b.z * delta.x * (1.0f - delta.y) +
+		(float)c.z * (1.0f - delta.x) * delta.y + (float)d.z * delta.x * delta.y);
+
+	return result;
 }

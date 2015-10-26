@@ -440,5 +440,6 @@ void GetAllFiles(string path, vector<string>& files)
 		files.push_back(filename);
 	}
 	
+	ifs.close();
 	remove("fileName.txt");
 }
